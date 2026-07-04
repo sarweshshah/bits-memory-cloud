@@ -1,0 +1,21 @@
+{
+  "name": "bits-memory-cloud",
+  "version": "1.0.0",
+  "description": "Interactive 3D point cloud viewer — textured mesh to colored PLY in the browser",
+  "author": "Sarwesh Shah",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "generate": ".venv/bin/python mesh_to_pointcloud.py",
+    "build": "npm run generate",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.175.0"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0"
+  }
+}
