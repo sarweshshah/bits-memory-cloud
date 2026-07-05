@@ -325,7 +325,7 @@ function setupGUI() {
   helpersFolder.add(params, "showAxes").name("Axes").onChange(updateHelpers);
   helpersFolder.add(params, "showGrid").name("Grid").onChange(updateHelpers);
   helpersFolder.add(params, "showBbox").name("Bounding box").onChange(updateHelpers);
-  helpersFolder.open();
+  helpersFolder.close();
 
   const cameraFolder = gui.addFolder("Camera");
   zoomDistanceController = cameraFolder
@@ -344,9 +344,10 @@ function setupGUI() {
     });
 
   cameraFolder.add({ reset: resetCamera }, "reset").name("Reset view");
-  cameraFolder.open();
+  cameraFolder.close();
 
   gui.add(params, "pointCount").name("Points").disable();
+  gui.close();
 }
 
 function loadPointCloud() {
