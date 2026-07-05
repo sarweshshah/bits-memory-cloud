@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { PLYLoader } from "three/addons/loaders/PLYLoader.js";
 import GUI from "three/addons/libs/lil-gui.module.min.js";
+import gsap from "gsap";
 
 const PLY_URL = "/cloud_web.ply";
 const AUTO_ROTATE_SPEED = 0.35;
@@ -26,6 +27,37 @@ const canvas = document.getElementById("canvas");
 const overlay = document.getElementById("overlay");
 const statusEl = document.getElementById("status");
 const progressFill = document.getElementById("progress-fill");
+const overlayTitle = overlay.querySelector("h1");
+const progressBar = document.getElementById("progress-bar");
+
+gsap.defaults({ duration: 0.6, ease: "power2.out" });
+
+const motionMedia = gsap.matchMedia();
+let reduceMotion = false;
+
+motionMedia.add(
+  { reduceMotion: "(prefers-reduced-motion: reduce)" },
+  (context) => {
+    reduceMotion = context.conditions.reduceMotion;
+
+    gsap.set(progressFill, { scaleX: 0, transformOrigin: "left center" });
+
+    if (reduceMotion) {
+      gsap.set([overlayTitle, statusEl, progressBar], { autoAlpha: 1, y: 0 });
+      return;
+    }
+
+    gsap.from(overlayTitle, { autoAlpha: 0, y: 14, duration: 0.7, delay: 0.1 });
+    gsap.from(statusEl, { autoAlpha: 0, y: 10, duration: 0.55, delay: 0.22 });
+    gsap.from(progressBar, {
+      autoAlpha: 0,
+      scaleX: 0.4,
+      duration: 0.5,
+      delay: 0.34,
+      transformOrigin: "center center",
+    });
+  }
+);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050508);
@@ -105,11 +137,23 @@ function setStatus(text) {
 }
 
 function setProgress(pct) {
-  progressFill.style.width = `${Math.min(100, pct * 100)}%`;
+  gsap.to(progressFill, {
+    scaleX: Math.min(1, pct),
+    duration: reduceMotion ? 0 : 0.25,
+    ease: "power1.out",
+    overwrite: true,
+  });
 }
 
 function hideOverlay() {
-  overlay.classList.add("hidden");
+  gsap.to(overlay, {
+    autoAlpha: 0,
+    duration: reduceMotion ? 0 : 0.85,
+    ease: "power2.inOut",
+    onComplete: () => {
+      overlay.style.visibility = "hidden";
+    },
+  });
 }
 
 function getCameraSettings() {

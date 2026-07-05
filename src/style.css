@@ -32,13 +32,8 @@ body {
   justify-content: center;
   gap: 1rem;
   background: radial-gradient(ellipse at center, #0a0a12 0%, #050508 70%);
-  transition: opacity 0.8s ease, visibility 0.8s ease;
   pointer-events: none;
-}
-
-#overlay.hidden {
-  opacity: 0;
-  visibility: hidden;
+  will-change: opacity;
 }
 
 #overlay h1 {
@@ -47,11 +42,13 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   opacity: 0.85;
+  will-change: transform, opacity;
 }
 
 #status {
   font-size: 0.875rem;
   opacity: 0.55;
+  will-change: transform, opacity;
 }
 
 #progress-bar {
@@ -60,11 +57,14 @@ body {
   background: rgba(255, 255, 255, 0.08);
   border-radius: 1px;
   overflow: hidden;
+  will-change: transform, opacity;
 }
 
 #progress-fill {
-  width: 0%;
+  width: 100%;
   height: 100%;
   background: linear-gradient(90deg, #6b8cff, #a78bfa);
-  transition: width 0.15s ease;
+  transform: scaleX(0);
+  transform-origin: left center;
+  will-change: transform;
 }
