@@ -17,6 +17,7 @@ import { PointCloud } from "./pointcloud/PointCloud.js";
 import { PointSelection } from "./pointcloud/PointSelection.js";
 import { PointInteraction } from "./interaction/PointInteraction.js";
 import { ControlPanel } from "./controls/ControlPanel.js";
+import { getSelectedPoint } from "./navigation/PointUrl.js";
 
 gsap.defaults({ duration: 0.6, ease: "power2.out" });
 
@@ -42,7 +43,9 @@ export class App {
       overlayTitle: document.querySelector("#overlay h1"),
       progressBar: document.getElementById("progress-bar"),
     });
-    this.tooltip = new Tooltip(document.getElementById("point-tooltip"));
+    this.tooltip = new Tooltip(document.getElementById("point-tooltip"), {
+      getReduceMotion: () => this.overlay.reduceMotion,
+    });
     this.goToForm = new GoToForm({
       form: document.getElementById("goto-form"),
       input: document.getElementById("goto-id"),
@@ -147,9 +150,24 @@ export class App {
 
   #bindEvents() {
     window.addEventListener("resize", () => this.#onResize());
+    window.addEventListener("popstate", () => this.#onPopState());
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape") this.interaction.dismissFocus();
     });
+  }
+
+  #onPopState() {
+    if (!this.pointCloud.ready) return;
+
+    const index = getSelectedPoint();
+    if (index === null) {
+      if (this.interaction.isFocused) {
+        this.interaction.dismissFocus({ fromHistory: true });
+      }
+      return;
+    }
+
+    this.interaction.goToPoint(index, { fromHistory: true });
   }
 
   #start() {
@@ -205,6 +223,11 @@ export class App {
         this.goToForm.enable(this.pointCloud.pointCount);
         this.overlay.hide();
         this.sceneManager.requestRender();
+
+        const index = getSelectedPoint();
+        if (index !== null) {
+          this.interaction.goToPoint(index, { fromHistory: true });
+        }
       },
       onError: (err) => {
         console.error(err);

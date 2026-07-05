@@ -1,5 +1,10 @@
 import * as THREE from "three";
 import { CLICK_THRESHOLD_PX } from "../constants.js";
+import {
+  setSelectedPoint,
+  clearSelectedPoint,
+  replaceSelectedPoint,
+} from "../navigation/PointUrl.js";
 
 export class PointInteraction {
   constructor({
@@ -41,7 +46,7 @@ export class PointInteraction {
     this.canvas.addEventListener("pointerleave", () => this.#hideHoverTooltip());
   }
 
-  dismissFocus() {
+  dismissFocus({ fromHistory = false } = {}) {
     if (!this.focusSession) return;
 
     const saved = this.focusSession.savedCamera;
@@ -51,13 +56,17 @@ export class PointInteraction {
     this.hoveredIndex = -1;
     this.selection.reset();
 
+    if (!fromHistory) {
+      clearSelectedPoint();
+    }
+
     this.cameraController.animateTo(saved, () => {
       this.cameraController.setViewFrozen(false, this.params.autoRotate);
       this.cameraController.logSettings("Selection dismissed");
     });
   }
 
-  goToPoint(rawId) {
+  goToPoint(rawId, { fromHistory = false } = {}) {
     if (!this.pointCloud.ready) return;
 
     const count = this.pointCloud.pointCount;
@@ -65,12 +74,20 @@ export class PointInteraction {
 
     if (!Number.isFinite(index) || index < 0 || index >= count) {
       this.goToForm.markInvalid();
+      if (fromHistory) {
+        replaceSelectedPoint(null);
+      }
+      return;
+    }
+
+    if (fromHistory && this.focusSession?.index === index) {
+      this.goToForm.setValue(index);
       return;
     }
 
     this.goToForm.clearInvalid();
     this.goToForm.setValue(index);
-    this.#enterSelection(index, { animate: true });
+    this.#enterSelection(index, { animate: true, fromHistory });
     this.cameraController.logSettings("Camera (go to point)");
   }
 
@@ -119,7 +136,7 @@ export class PointInteraction {
     this.onRenderRequest();
   }
 
-  #enterSelection(index, { animate = false } = {}) {
+  #enterSelection(index, { animate = false, fromHistory = false } = {}) {
     if (!this.focusSession) {
       this.focusSession = {
         index,
@@ -129,23 +146,26 @@ export class PointInteraction {
       this.focusSession.index = index;
     }
 
+    if (!fromHistory) {
+      setSelectedPoint(index);
+    }
+
     this.selection.select(index, this.params.pointSize);
     this.cameraController.setViewFrozen(true, this.params.autoRotate);
     this.canvas.style.cursor = "default";
 
-    const finish = () => {
-      this.#showFocusedTooltip(index);
-      this.onRenderRequest();
-    };
+    this.#showFocusedTooltip(index);
 
     if (animate) {
       const worldPos = this.pointCloud.getWorldPosition(index);
       const snapState = this.cameraController.getSnapState(worldPos);
-      this.cameraController.animateTo(snapState, finish, () =>
-        this.updateFocusedTooltip()
+      this.cameraController.animateTo(
+        snapState,
+        () => this.onRenderRequest(),
+        () => this.updateFocusedTooltip()
       );
     } else {
-      finish();
+      this.onRenderRequest();
     }
   }
 

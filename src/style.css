@@ -83,11 +83,11 @@ body {
   white-space: nowrap;
   backdrop-filter: blur(8px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  will-change: transform, opacity;
 }
 
 #point-tooltip.focused {
   pointer-events: auto;
-  padding-top: 1.35rem;
 }
 
 #point-tooltip .tooltip-id {

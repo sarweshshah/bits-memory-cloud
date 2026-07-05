@@ -45,7 +45,6 @@ export class ControlPanel {
       .add(this.params, "showBbox")
       .name("Bounding box")
       .onChange(() => this.callbacks.onHelpersChange());
-    helpersFolder.close();
 
     const cameraFolder = this.gui.addFolder("Camera");
     this.zoomDistanceController = cameraFolder
@@ -60,7 +59,6 @@ export class ControlPanel {
       .onChange(() => this.callbacks.onRollChange());
 
     cameraFolder.add({ reset: () => this.callbacks.onCameraReset() }, "reset").name("Reset view");
-    cameraFolder.close();
 
     this.gui.add(this.params, "pointCount").name("Points").disable();
     this.gui.close();

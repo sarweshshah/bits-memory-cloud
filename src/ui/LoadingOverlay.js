@@ -55,7 +55,22 @@ export class LoadingOverlay {
   }
 
   setStatus(text) {
+    if (this.statusEl.textContent === text) return;
     this.statusEl.textContent = text;
+
+    if (this.reduceMotion) return;
+
+    gsap.fromTo(
+      this.statusEl,
+      { autoAlpha: 0.3, y: 4 },
+      {
+        autoAlpha: 0.55,
+        y: 0,
+        duration: 0.22,
+        ease: "power1.out",
+        overwrite: true,
+      }
+    );
   }
 
   setProgress(pct) {

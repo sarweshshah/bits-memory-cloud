@@ -28,7 +28,10 @@ export class CameraController {
     this.rollController = null;
 
     controls.addEventListener("end", () => this.logSettings("Camera (orbit)"));
-    controls.addEventListener("change", () => this.syncZoomDistance());
+    controls.addEventListener("change", () => {
+      this.syncZoomDistance();
+      this.onRenderRequest();
+    });
   }
 
   setGuiControllers({ zoomDistance, roll }) {
