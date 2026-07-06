@@ -5,7 +5,6 @@ const _offset = new THREE.Vector3();
 const _forward = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _up = new THREE.Vector3();
-const _center = new THREE.Vector3();
 const _size = new THREE.Vector3();
 const _box = new THREE.Box3();
 const _pointWorld = new THREE.Vector3();
@@ -19,30 +18,73 @@ export class CameraController {
     this.onRenderRequest = onRenderRequest;
 
     this.boundingRadius = 1;
-    this.defaultCameraPos = null;
-    this.defaultTarget = null;
+    this.defaultCameraPos = new THREE.Vector3();
+    this.defaultTarget = new THREE.Vector3();
     this.defaultRoll = 0;
+    this.defaultYaw = 0;
+    this.defaultPitch = 0;
     this.cameraTween = null;
 
     this.zoomDistanceController = null;
     this.rollController = null;
+    this.yawController = null;
+    this.pitchController = null;
 
     controls.addEventListener("end", () => this.logSettings("Camera (orbit)"));
     controls.addEventListener("change", () => {
       this.syncZoomDistance();
+      this.syncYaw();
+      this.syncPitch();
       this.onRenderRequest();
     });
   }
 
-  setGuiControllers({ zoomDistance, roll }) {
+  setGuiControllers({ zoomDistance, roll, yaw, pitch }) {
     this.zoomDistanceController = zoomDistance;
     this.rollController = roll;
+    this.yawController = yaw;
+    this.pitchController = pitch;
+  }
+
+  #readOrbitAngles() {
+    _offset.copy(this.camera.position).sub(this.controls.target);
+    const distance = _offset.length();
+    if (distance === 0) return null;
+
+    return {
+      distance,
+      yaw: THREE.MathUtils.radToDeg(Math.atan2(_offset.x, _offset.z)),
+      pitch: THREE.MathUtils.radToDeg(
+        Math.asin(THREE.MathUtils.clamp(_offset.y / distance, -1, 1))
+      ),
+    };
+  }
+
+  #applyOrbitAngles(yawDeg, pitchDeg, distance) {
+    const yawRad = THREE.MathUtils.degToRad(yawDeg);
+    const pitchRad = THREE.MathUtils.degToRad(pitchDeg);
+    const horiz = distance * Math.cos(pitchRad);
+    _offset.x = horiz * Math.sin(yawRad);
+    _offset.y = distance * Math.sin(pitchRad);
+    _offset.z = horiz * Math.cos(yawRad);
+    this.camera.position.copy(this.controls.target).add(_offset);
+    this.controls.update();
+    this.applyRoll();
+  }
+
+  getYaw() {
+    return this.#readOrbitAngles()?.yaw ?? 0;
+  }
+
+  getPitch() {
+    return this.#readOrbitAngles()?.pitch ?? 0;
   }
 
   getSettings() {
     _offset.copy(this.camera.position).sub(this.controls.target);
     const distance = _offset.length();
-    const yaw = THREE.MathUtils.radToDeg(Math.atan2(_offset.x, _offset.z));
+    const yaw = this.getYaw();
+    const pitch = this.getPitch();
 
     return {
       position: {
@@ -59,6 +101,7 @@ export class CameraController {
       zoomDistance: +this.params.zoomDistance.toFixed(2),
       roll: +this.params.roll.toFixed(2),
       yaw: +yaw.toFixed(2),
+      pitch: +pitch.toFixed(2),
       fov: this.camera.fov,
     };
   }
@@ -110,17 +153,19 @@ export class CameraController {
 
   fitToObject(object, settings) {
     _box.setFromObject(object);
-    _box.getCenter(_center);
     _box.getSize(_size);
     this.boundingRadius = _size.length() * 0.5;
 
-    object.position.sub(_center);
-
-    this.defaultCameraPos = settings.position.clone();
-    this.defaultTarget = settings.target.clone();
     this.defaultRoll = settings.roll;
 
     this.applySettings(settings);
+    this.setDistance(settings.zoomDistance);
+    this.defaultCameraPos.copy(this.camera.position);
+    this.defaultTarget.copy(this.controls.target);
+    this.defaultYaw = this.params.yaw;
+    this.defaultPitch = this.params.pitch;
+    this.syncYaw();
+    this.syncPitch();
     this.updateZoomLimits();
     this.logSettings("Camera (initial)");
 
@@ -136,6 +181,8 @@ export class CameraController {
     this.controls.update();
     this.applyRoll();
     this.syncZoomDistance();
+    this.syncYaw();
+    this.syncPitch();
     this.logSettings("Camera (reset)");
     this.onRenderRequest();
   }
@@ -166,6 +213,36 @@ export class CameraController {
   syncZoomDistance() {
     this.params.zoomDistance = this.getDistance();
     this.zoomDistanceController?.updateDisplay();
+  }
+
+  syncYaw() {
+    this.params.yaw = this.getYaw();
+    this.yawController?.updateDisplay();
+  }
+
+  syncPitch() {
+    this.params.pitch = this.getPitch();
+    this.pitchController?.updateDisplay();
+  }
+
+  setYaw(yawDeg) {
+    const orbit = this.#readOrbitAngles();
+    if (!orbit) return;
+
+    this.#applyOrbitAngles(yawDeg, orbit.pitch, orbit.distance);
+    this.params.yaw = yawDeg;
+    this.logSettings("Camera (yaw)");
+    this.onRenderRequest();
+  }
+
+  setPitch(pitchDeg) {
+    const orbit = this.#readOrbitAngles();
+    if (!orbit) return;
+
+    this.#applyOrbitAngles(orbit.yaw, pitchDeg, orbit.distance);
+    this.params.pitch = pitchDeg;
+    this.logSettings("Camera (pitch)");
+    this.onRenderRequest();
   }
 
   updateZoomLimits() {
@@ -227,6 +304,8 @@ export class CameraController {
         this.applyRoll();
         this.controls.update();
         this.syncZoomDistance();
+        this.syncYaw();
+        this.syncPitch();
         onUpdate?.();
         this.onRenderRequest();
       },

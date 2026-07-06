@@ -7,7 +7,7 @@ export const DEFAULT_CAMERA = {
   fov: 50,
   position: new THREE.Vector3(-132.866, 45.298, 172.081),
   target: new THREE.Vector3(-26.208, -3.883, -15.818),
-  zoomDistance: 220,
+  zoomDistance: 200,
   roll: 0,
 };
 

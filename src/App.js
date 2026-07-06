@@ -66,6 +66,8 @@ export class App {
       pointCount: "—",
       zoomDistance: DEFAULT_CAMERA.zoomDistance,
       roll: DEFAULT_CAMERA.roll,
+      yaw: 0,
+      pitch: 0,
     };
   }
 
@@ -136,6 +138,8 @@ export class App {
       onFogChange: (v) => this.sceneManager.setFog(v),
       onHelpersChange: () => this.#updateHelpers(),
       onZoomDistanceChange: (v) => this.cameraController.setDistance(v),
+      onYawChange: (v) => this.cameraController.setYaw(v),
+      onPitchChange: (v) => this.cameraController.setPitch(v),
       onRollChange: () => {
         this.cameraController.applyRoll();
         this.cameraController.logSettings("Camera (roll)");

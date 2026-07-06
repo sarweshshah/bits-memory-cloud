@@ -7,6 +7,8 @@ export class ControlPanel {
     this.gui = null;
     this.zoomDistanceController = null;
     this.rollController = null;
+    this.yawController = null;
+    this.pitchController = null;
   }
 
   setup() {
@@ -58,6 +60,18 @@ export class ControlPanel {
       .name("Roll")
       .onChange(() => this.callbacks.onRollChange());
 
+    this.yawController = cameraFolder
+      .add(this.params, "yaw", -180, 180, 0.1)
+      .name("Yaw")
+      .onChange((v) => this.callbacks.onYawChange(v));
+    this.yawController.listen();
+
+    this.pitchController = cameraFolder
+      .add(this.params, "pitch", -89, 89, 0.1)
+      .name("Pitch")
+      .onChange((v) => this.callbacks.onPitchChange(v));
+    this.pitchController.listen();
+
     cameraFolder.add({ reset: () => this.callbacks.onCameraReset() }, "reset").name("Reset view");
 
     this.gui.add(this.params, "pointCount").name("Points").disable();
@@ -66,6 +80,8 @@ export class ControlPanel {
     return {
       zoomDistance: this.zoomDistanceController,
       roll: this.rollController,
+      yaw: this.yawController,
+      pitch: this.pitchController,
     };
   }
 

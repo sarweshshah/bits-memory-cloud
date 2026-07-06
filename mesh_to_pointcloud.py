@@ -175,6 +175,24 @@ def rotate_axis(points, axis, degrees):
     return (r @ points.T).T
 
 
+ORIGIN_Y_OFFSET = -16.9
+
+
+def center_origin_at_peak_xz(points):
+    """Translate so origin X/Z match the highest-Y point; origin Y at bbox center."""
+    peak_idx = int(np.argmax(points[:, 1]))
+    peak_x = points[peak_idx, 0]
+    peak_z = points[peak_idx, 2]
+    center_y = (points[:, 1].min() + points[:, 1].max()) * 0.5 + ORIGIN_Y_OFFSET
+    offset = np.array([peak_x, center_y, peak_z], dtype=np.float64)
+    print(
+        f"Centering origin at peak XZ ({peak_x:.3f}, {peak_z:.3f}), "
+        f"Y {center_y:.3f} (bbox center {center_y - ORIGIN_Y_OFFSET:.3f}, "
+        f"offset {ORIGIN_Y_OFFSET:+.1f})"
+    )
+    return points - offset
+
+
 def write_ply_binary(path, points, colors):
     n = len(points)
     header = (
@@ -314,6 +332,8 @@ def main():
         axis = default_view_forward(args.camera_yaw)
         print(f"Applying {args.roll:+.1f}° roll around view axis {axis}...")
         points = rotate_axis(points, axis, args.roll)
+
+    points = center_origin_at_peak_xz(points)
 
     print(f"Writing {len(points):,} points -> {out_path}")
     write_ply_binary(out_path, points, colors)
