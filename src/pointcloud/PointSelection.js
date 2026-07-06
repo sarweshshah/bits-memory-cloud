@@ -1,12 +1,6 @@
 import * as THREE from "three";
 import gsap from "gsap";
-import {
-  DIM_FACTOR,
-  SELECT_ACCENT,
-  SELECT_BRIGHTEN,
-  SELECT_MIX,
-  HIGHLIGHT_SIZE_MULTIPLIER,
-} from "../constants.js";
+import { SELECTION } from "../constants.js";
 
 export class PointSelection {
   constructor(pointCloud, group, { onRenderRequest, getReduceMotion }) {
@@ -49,9 +43,9 @@ export class PointSelection {
         colors.array[j + 1] = sg;
         colors.array[j + 2] = sb;
       } else {
-        colors.array[j] = r * DIM_FACTOR;
-        colors.array[j + 1] = g * DIM_FACTOR;
-        colors.array[j + 2] = b * DIM_FACTOR;
+        colors.array[j] = r * SELECTION.dimFactor;
+        colors.array[j + 1] = g * SELECTION.dimFactor;
+        colors.array[j + 2] = b * SELECTION.dimFactor;
       }
     }
 
@@ -78,20 +72,20 @@ export class PointSelection {
     this.highlight.material.size =
       this.pointCloud.basePointSize *
       pointSizeMultiplier *
-      HIGHLIGHT_SIZE_MULTIPLIER;
+      SELECTION.highlightSizeMultiplier;
   }
 
   #getSelectedColor(r, g, b) {
-    const brightR = Math.min(1, r * SELECT_BRIGHTEN);
-    const brightG = Math.min(1, g * SELECT_BRIGHTEN);
-    const brightB = Math.min(1, b * SELECT_BRIGHTEN);
-    const mix = SELECT_MIX;
+    const brightR = Math.min(1, r * SELECTION.brighten);
+    const brightG = Math.min(1, g * SELECTION.brighten);
+    const brightB = Math.min(1, b * SELECTION.brighten);
+    const mix = SELECTION.mix;
     const inv = 1 - mix;
 
     return [
-      brightR * inv + SELECT_ACCENT.r * mix,
-      brightG * inv + SELECT_ACCENT.g * mix,
-      brightB * inv + SELECT_ACCENT.b * mix,
+      brightR * inv + SELECTION.accent.r * mix,
+      brightG * inv + SELECTION.accent.g * mix,
+      brightB * inv + SELECTION.accent.b * mix,
     ];
   }
 
@@ -106,7 +100,7 @@ export class PointSelection {
 
     const highlightMaterial = new THREE.PointsMaterial({
       color: 0xffffff,
-      size: this.pointCloud.basePointSize * HIGHLIGHT_SIZE_MULTIPLIER,
+      size: this.pointCloud.basePointSize * SELECTION.highlightSizeMultiplier,
       sizeAttenuation: true,
       transparent: true,
       opacity: 1,
@@ -133,7 +127,7 @@ export class PointSelection {
     this.highlight.material.size =
       this.pointCloud.basePointSize *
       pointSizeMultiplier *
-      HIGHLIGHT_SIZE_MULTIPLIER;
+      SELECTION.highlightSizeMultiplier;
     this.highlight.visible = true;
   }
 

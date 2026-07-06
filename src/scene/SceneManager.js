@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { DEFAULT_SCENE } from "../constants.js";
 
 export class SceneManager {
   constructor(canvas) {
@@ -19,6 +20,8 @@ export class SceneManager {
       powerPreference: "high-performance",
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = DEFAULT_SCENE.toneMappingExposure;
   }
 
   requestRender() {
@@ -27,6 +30,12 @@ export class SceneManager {
 
   setFog(enabled) {
     this.scene.fog = enabled ? this.fog : null;
+    this.requestRender();
+  }
+
+  setBackground(hex) {
+    this.scene.background.setHex(hex);
+    this.fog.color.setHex(hex);
     this.requestRender();
   }
 

@@ -1,7 +1,26 @@
 import * as THREE from "three";
 
-export const PLY_URL = "/cloud_web.ply";
-export const AUTO_ROTATE_SPEED = 0.35;
+export const POINT_CLOUD = {
+  url: "/cloud_web.ply",
+  colorBrightness: 1.5,
+};
+
+export const CONTROLS = {
+  autoRotateSpeed: 0.35,
+};
+
+export const DEFAULT_SCENE = {
+  background: "Near black",
+  backgroundPresets: {
+    "Near black": 0x050508,
+    Midnight: 0x0a0a12,
+    Charcoal: 0x1a1a1f,
+    "Deep navy": 0x0d1117,
+    Slate: 0x2d3748,
+    White: 0xffffff,
+  },
+  toneMappingExposure: 1.35,
+};
 
 export const DEFAULT_CAMERA = {
   fov: 50,
@@ -9,15 +28,20 @@ export const DEFAULT_CAMERA = {
   target: new THREE.Vector3(0, -3.883, 0),
   zoomDistance: 200,
   roll: 0,
-  yaw: 90,
+  yaw: 70,
   pitch: 18,
+  coordDecimals: 1,
 };
 
-export const CLICK_THRESHOLD_PX = 5;
-export const DIM_FACTOR = 0.3;
-export const SELECT_ACCENT = { r: 1, g: 0.97, b: 0.82 };
-export const SELECT_BRIGHTEN = 1.4;
-export const SELECT_MIX = 0.5;
-export const HIGHLIGHT_SIZE_MULTIPLIER = 5;
-export const SNAP_MIN_DISTANCE = 130;
-export const COORD_DECIMALS = 1;
+export const SELECTION = {
+  focusDistance: 100,
+  dimFactor: 0.1,
+  accent: { r: 1, g: 0.97, b: 0.82 },
+  brighten: 2.0,
+  mix: 0.5,
+  highlightSizeMultiplier: 5,
+};
+
+export const INTERACTION = {
+  clickThresholdPx: 5,
+};

@@ -2,11 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import gsap from "gsap";
 
-import {
-  PLY_URL,
-  AUTO_ROTATE_SPEED,
-  DEFAULT_CAMERA,
-} from "./constants.js";
+import { POINT_CLOUD, CONTROLS, DEFAULT_CAMERA } from "./constants.js";
 import { LoadingOverlay } from "./ui/LoadingOverlay.js";
 import { Tooltip } from "./ui/Tooltip.js";
 import { GoToForm } from "./ui/GoToForm.js";
@@ -83,7 +79,7 @@ export class App {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
     this.controls.autoRotate = true;
-    this.controls.autoRotateSpeed = AUTO_ROTATE_SPEED;
+    this.controls.autoRotateSpeed = CONTROLS.autoRotateSpeed;
     this.controls.minDistance = 5;
     this.controls.maxDistance = 600;
 
@@ -207,7 +203,7 @@ export class App {
   }
 
   #loadPointCloud() {
-    this.pointCloud.load(PLY_URL, {
+    this.pointCloud.load(POINT_CLOUD.url, {
       onProgress: (pct) => {
         this.overlay.setProgress(pct);
         this.overlay.setStatus(`Loading… ${(pct * 100).toFixed(0)}%`);
@@ -243,7 +239,10 @@ export class App {
   #animate() {
     requestAnimationFrame(() => this.#animate());
 
-    const controlsActive = this.controls.update();
+    const controlsActive =
+      this.controls.enabled &&
+      !this.cameraController.isAnimating &&
+      this.controls.update();
     if (this.params.roll !== 0) {
       this.cameraController.applyRoll();
     }
@@ -251,6 +250,7 @@ export class App {
     const shouldRender =
       this.sceneManager.needsRender ||
       controlsActive ||
+      this.cameraController.isAnimating ||
       this.interaction.isFocused ||
       this.selection.hasBlink;
 

@@ -1,5 +1,5 @@
 import gsap from "gsap";
-import { COORD_DECIMALS } from "../constants.js";
+import { DEFAULT_CAMERA } from "../constants.js";
 
 const TOOLTIP_OFFSET = 14;
 const VIEWPORT_PADDING = 8;
@@ -35,7 +35,7 @@ export class Tooltip {
       ${dismissible ? '<button type="button" class="tooltip-dismiss" aria-label="Dismiss">×</button>' : ""}
       <div class="tooltip-id">#${data.id}</div>
       <div class="tooltip-coords">
-        x: ${data.x.toFixed(COORD_DECIMALS)} &nbsp; y: ${data.y.toFixed(COORD_DECIMALS)} &nbsp; z: ${data.z.toFixed(COORD_DECIMALS)}
+        x: ${data.x.toFixed(DEFAULT_CAMERA.coordDecimals)} &nbsp; y: ${data.y.toFixed(DEFAULT_CAMERA.coordDecimals)} &nbsp; z: ${data.z.toFixed(DEFAULT_CAMERA.coordDecimals)}
       </div>
     `;
   }

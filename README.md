@@ -1,14 +1,27 @@
 # Bits Memory Cloud
 
-Interactive 3D point cloud viewer built with [Three.js](https://threejs.org/) and [Vite](https://vitejs.dev/). A textured OBJ mesh is converted offline into a dense colored PLY point cloud, then rendered in the browser with orbit controls and a live settings panel.
+Interactive 3D point cloud viewer built with [Three.js](https://threejs.org/), [GSAP](https://gsap.com/), and [Vite](https://vitejs.dev/). A textured OBJ mesh is converted offline into a dense colored PLY point cloud, then rendered in the browser with orbit controls, point selection, and a live settings panel.
 
 ## Features
 
+### Pipeline
 - Convert textured OBJ/MTL meshes to colored PLY point clouds
 - Web-optimized subsampled output for faster loading
-- Orbit controls with adjustable point size, opacity, fog, and roll
-- Debug helpers (axes, grid, bounding box)
 - Loading progress UI for large point cloud files
+
+### Viewer
+- Orbit controls with adjustable point size, opacity, fog, and roll
+- ACES filmic tone mapping for richer color
+- Debug helpers (axes, grid, bounding box)
+- Camera panel: distance, yaw, pitch, roll, and reset view
+
+### Point interaction
+- Hover a point to see its ID and world coordinates in a tooltip
+- Click to enter focus mode — dims the cloud, highlights the point, and animates the camera
+- **Go to Point ID** form to jump directly to a point by index
+- Shareable deep links via `?point=<id>` URL parameter (browser back/forward supported)
+- Press **Escape** or click the tooltip dismiss button to exit focus mode
+- Respects `prefers-reduced-motion` for camera and UI animations
 
 ## Prerequisites
 
@@ -39,16 +52,35 @@ Open [http://localhost:5173](http://localhost:5173). The dev server opens automa
 
 ```
 bits-memory-cloud/
-├── assets/                 # Source mesh, textures, and generated PLY files
+├── assets/                     # Served as public dir; mesh, textures, generated PLY
 │   ├── mesh.obj
 │   ├── mesh.mtl
 │   ├── tex_*.jpg
-│   ├── cloud.ply           # Generated (gitignored)
-│   └── cloud_web.ply       # Generated web-optimized file (gitignored)
+│   ├── cloud.ply               # Generated (gitignored)
+│   └── cloud_web.ply           # Generated web-optimized file (gitignored)
 ├── src/
-│   ├── main.js             # Three.js viewer
-│   └── style.css
-├── mesh_to_pointcloud.py   # Mesh → PLY conversion script
+│   ├── main.js                 # Entry point
+│   ├── App.js                  # Application orchestration
+│   ├── constants.js            # Tunable defaults (camera, selection, scene)
+│   ├── style.css
+│   ├── controls/
+│   │   └── ControlPanel.js     # lil-gui settings panel
+│   ├── interaction/
+│   │   └── PointInteraction.js # Hover, click, focus mode
+│   ├── navigation/
+│   │   └── PointUrl.js         # ?point= URL state
+│   ├── pointcloud/
+│   │   ├── PointCloud.js       # PLY loading and raycasting
+│   │   └── PointSelection.js   # Highlight and dim effects
+│   ├── scene/
+│   │   ├── SceneManager.js     # Renderer, fog, tone mapping
+│   │   ├── CameraController.js # Orbit sync, snap, GSAP animations
+│   │   └── HelpersManager.js   # Axes, grid, bounding box
+│   └── ui/
+│       ├── LoadingOverlay.js
+│       ├── Tooltip.js
+│       └── GoToForm.js
+├── mesh_to_pointcloud.py       # Mesh → PLY conversion script
 ├── index.html
 ├── vite.config.js
 └── package.json
@@ -60,7 +92,7 @@ bits-memory-cloud/
 |---------|-------------|
 | `npm run dev` | Start Vite dev server |
 | `npm run generate` | Run Python script to build point clouds |
-| `npm run build` | Regenerate point clouds |
+| `npm run build` | Alias for `generate` |
 | `npm run preview` | Preview production build |
 
 ## Point cloud generation
@@ -86,10 +118,31 @@ Place your mesh (`mesh.obj`, `mesh.mtl`) and texture images in `assets/`, then r
 
 ## Viewer controls
 
+### Navigation
 - **Drag** — orbit
 - **Scroll** — zoom
 - **Right-drag** — pan
-- **GUI panel** — point size, opacity, auto-rotate, fog, debug helpers
+- **GUI panel** — point size, opacity, auto-rotate, fog, debug helpers, camera settings
+
+### Point selection
+- **Hover** — show point ID and coordinates
+- **Click** — focus on a point (camera snaps in, cloud dims)
+- **Escape** or tooltip **×** — dismiss focus and restore camera
+- **Go to Point ID** — enter an index and press Go (or Enter)
+- **URL** — append `?point=123` to link directly to a point
+
+## Configuration
+
+Defaults live in `src/constants.js`:
+
+| Group | Key settings |
+|-------|--------------|
+| `POINT_CLOUD` | PLY URL, color brightness |
+| `DEFAULT_CAMERA` | FOV, position, zoom distance, snap distance |
+| `DEFAULT_SCENE` | Background presets, tone mapping exposure |
+| `SELECTION` | Dim factor, highlight size, accent color |
+| `CONTROLS` | Auto-rotate speed |
+| `INTERACTION` | Click-vs-drag threshold |
 
 ## License
 

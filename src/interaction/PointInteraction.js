@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CLICK_THRESHOLD_PX } from "../constants.js";
+import { INTERACTION } from "../constants.js";
 import {
   setSelectedPoint,
   clearSelectedPoint,
@@ -87,7 +87,7 @@ export class PointInteraction {
 
     this.goToForm.clearInvalid();
     this.goToForm.setValue(index);
-    this.#enterSelection(index, { animate: true, fromHistory });
+    this.#enterSelection(index, { fromHistory });
     this.cameraController.logSettings("Camera (go to point)");
   }
 
@@ -136,7 +136,7 @@ export class PointInteraction {
     this.onRenderRequest();
   }
 
-  #enterSelection(index, { animate = false, fromHistory = false } = {}) {
+  #enterSelection(index, { fromHistory = false } = {}) {
     if (!this.focusSession) {
       this.focusSession = {
         index,
@@ -156,17 +156,13 @@ export class PointInteraction {
 
     this.#showFocusedTooltip(index);
 
-    if (animate) {
-      const worldPos = this.pointCloud.getWorldPosition(index);
-      const snapState = this.cameraController.getSnapState(worldPos);
-      this.cameraController.animateTo(
-        snapState,
-        () => this.onRenderRequest(),
-        () => this.updateFocusedTooltip()
-      );
-    } else {
-      this.onRenderRequest();
-    }
+    const worldPos = this.pointCloud.getWorldPosition(index);
+    const snapState = this.cameraController.getSnapState(worldPos);
+    this.cameraController.animateTo(
+      snapState,
+      () => this.onRenderRequest(),
+      () => this.updateFocusedTooltip()
+    );
   }
 
   #hideHoverTooltip() {
@@ -215,7 +211,7 @@ export class PointInteraction {
     const dy = event.clientY - this.pointerDownPos.y;
     this.pointerDownPos = null;
 
-    if (dx * dx + dy * dy > CLICK_THRESHOLD_PX * CLICK_THRESHOLD_PX) return;
+    if (dx * dx + dy * dy > INTERACTION.clickThresholdPx * INTERACTION.clickThresholdPx) return;
 
     if (this.focusSession) {
       this.dismissFocus();

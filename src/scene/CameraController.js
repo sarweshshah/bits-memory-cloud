@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { COORD_DECIMALS, SNAP_MIN_DISTANCE } from "../constants.js";
+import { DEFAULT_CAMERA, SELECTION } from "../constants.js";
 
 const _offset = new THREE.Vector3();
 const _forward = new THREE.Vector3();
@@ -88,14 +88,14 @@ export class CameraController {
 
     return {
       position: {
-        x: +this.camera.position.x.toFixed(COORD_DECIMALS),
-        y: +this.camera.position.y.toFixed(COORD_DECIMALS),
-        z: +this.camera.position.z.toFixed(COORD_DECIMALS),
+        x: +this.camera.position.x.toFixed(DEFAULT_CAMERA.coordDecimals),
+        y: +this.camera.position.y.toFixed(DEFAULT_CAMERA.coordDecimals),
+        z: +this.camera.position.z.toFixed(DEFAULT_CAMERA.coordDecimals),
       },
       target: {
-        x: +this.controls.target.x.toFixed(COORD_DECIMALS),
-        y: +this.controls.target.y.toFixed(COORD_DECIMALS),
-        z: +this.controls.target.z.toFixed(COORD_DECIMALS),
+        x: +this.controls.target.x.toFixed(DEFAULT_CAMERA.coordDecimals),
+        y: +this.controls.target.y.toFixed(DEFAULT_CAMERA.coordDecimals),
+        z: +this.controls.target.z.toFixed(DEFAULT_CAMERA.coordDecimals),
       },
       distance: +distance.toFixed(2),
       zoomDistance: +this.params.zoomDistance.toFixed(2),
@@ -308,7 +308,6 @@ export class CameraController {
         this.params.roll = tweenState.roll;
         this.rollController?.updateDisplay();
         this.applyRoll();
-        this.controls.update();
         this.syncZoomDistance();
         this.syncYaw();
         this.syncPitch();
@@ -324,10 +323,10 @@ export class CameraController {
 
   getSnapState(worldPosition) {
     _pointWorld.copy(worldPosition);
-    const snapDistance = Math.max(
-      this.controls.minDistance * 2.5,
-      this.boundingRadius * 0.055,
-      SNAP_MIN_DISTANCE
+    const snapDistance = THREE.MathUtils.clamp(
+      SELECTION.focusDistance,
+      this.controls.minDistance,
+      this.controls.maxDistance
     );
 
     _offset.copy(this.camera.position).sub(this.controls.target);
@@ -345,11 +344,22 @@ export class CameraController {
     };
   }
 
+  #clearControlDeltas() {
+    this.controls._sphericalDelta?.set(0, 0, 0);
+    this.controls._panOffset?.set(0, 0, 0);
+  }
+
+  get isAnimating() {
+    return this.cameraTween !== null;
+  }
+
   setViewFrozen(frozen, autoRotate) {
     this.controls.enabled = !frozen;
     if (frozen) {
       this.controls.autoRotate = false;
+      this.#clearControlDeltas();
     } else {
+      this.#clearControlDeltas();
       this.controls.autoRotate = autoRotate;
     }
   }

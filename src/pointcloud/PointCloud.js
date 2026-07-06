@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { PLYLoader } from "three/addons/loaders/PLYLoader.js";
+import { POINT_CLOUD } from "../constants.js";
 
 const _pointWorld = new THREE.Vector3();
 const _projected = new THREE.Vector3();
@@ -38,6 +39,7 @@ export class PointCloud {
           opacity: 1,
           depthWrite: true,
         });
+        material.color.setScalar(POINT_CLOUD.colorBrightness);
 
         this.mesh = new THREE.Points(geometry, material);
         this.mesh.frustumCulled = true;
