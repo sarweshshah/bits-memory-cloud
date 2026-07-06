@@ -58,7 +58,7 @@ export class App {
     this.params = {
       pointSize: 1,
       opacity: 1,
-      autoRotate: false,
+      autoRotate: true,
       fog: false,
       showAxes: false,
       showGrid: false,
@@ -66,8 +66,8 @@ export class App {
       pointCount: "—",
       zoomDistance: DEFAULT_CAMERA.zoomDistance,
       roll: DEFAULT_CAMERA.roll,
-      yaw: 0,
-      pitch: 0,
+      yaw: DEFAULT_CAMERA.yaw,
+      pitch: DEFAULT_CAMERA.pitch,
     };
   }
 
@@ -82,7 +82,7 @@ export class App {
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
-    this.controls.autoRotate = false;
+    this.controls.autoRotate = true;
     this.controls.autoRotateSpeed = AUTO_ROTATE_SPEED;
     this.controls.minDistance = 5;
     this.controls.maxDistance = 600;

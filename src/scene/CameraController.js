@@ -160,6 +160,12 @@ export class CameraController {
 
     this.applySettings(settings);
     this.setDistance(settings.zoomDistance);
+    if (settings.yaw != null) {
+      this.setYaw(settings.yaw);
+    }
+    if (settings.pitch != null) {
+      this.setPitch(settings.pitch);
+    }
     this.defaultCameraPos.copy(this.camera.position);
     this.defaultTarget.copy(this.controls.target);
     this.defaultYaw = this.params.yaw;

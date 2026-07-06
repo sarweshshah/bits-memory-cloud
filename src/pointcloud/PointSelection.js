@@ -104,17 +104,16 @@ export class PointSelection {
       new THREE.Float32BufferAttribute([0, 0, 0], 3)
     );
 
-    this.highlight = new THREE.Points(
-      geometry,
-      new THREE.PointsMaterial({
-        color: 0xffffff,
-        size: this.pointCloud.basePointSize * HIGHLIGHT_SIZE_MULTIPLIER,
-        sizeAttenuation: true,
-        transparent: true,
-        opacity: 1,
-        depthWrite: false,
-      })
-    );
+    const highlightMaterial = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: this.pointCloud.basePointSize * HIGHLIGHT_SIZE_MULTIPLIER,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 1,
+      depthWrite: false,
+    });
+
+    this.highlight = new THREE.Points(geometry, highlightMaterial);
     this.highlight.visible = false;
     this.highlight.renderOrder = 1;
     this.group.add(this.highlight);

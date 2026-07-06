@@ -6,9 +6,11 @@ export const AUTO_ROTATE_SPEED = 0.35;
 export const DEFAULT_CAMERA = {
   fov: 50,
   position: new THREE.Vector3(-132.866, 45.298, 172.081),
-  target: new THREE.Vector3(-26.208, -3.883, -15.818),
+  target: new THREE.Vector3(0, -3.883, 0),
   zoomDistance: 200,
   roll: 0,
+  yaw: 90,
+  pitch: 18,
 };
 
 export const CLICK_THRESHOLD_PX = 5;
