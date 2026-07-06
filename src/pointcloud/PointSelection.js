@@ -1,3 +1,7 @@
+/**
+ * Visual feedback for a selected point: dim all others, brighten the target,
+ * and overlay a blinking highlight sprite on top.
+ */
 import * as THREE from "three";
 import gsap from "gsap";
 import { SELECTION } from "../constants.js";
@@ -10,7 +14,7 @@ export class PointSelection {
     this.getReduceMotion = getReduceMotion;
 
     this.selectedIndex = null;
-    this.highlight = null;
+    this.highlight = null; // Separate Points mesh rendered on top
     this.blinkTween = null;
   }
 
@@ -18,10 +22,15 @@ export class PointSelection {
     return this.selectedIndex !== null;
   }
 
+  /** True while the blink opacity tween is running (keeps render loop active). */
   get hasBlink() {
     return this.blinkTween !== null;
   }
 
+  /**
+   * Highlight a point by index: dim non-selected vertices, brighten selected,
+   * and show the overlay blink sprite.
+   */
   select(index, pointSizeMultiplier) {
     const mesh = this.pointCloud.mesh;
     const originalColors = this.pointCloud.originalColors;
@@ -55,6 +64,7 @@ export class PointSelection {
     this.onRenderRequest();
   }
 
+  /** Restore original vertex colors and hide the highlight overlay. */
   reset() {
     const mesh = this.pointCloud.mesh;
     const originalColors = this.pointCloud.originalColors;
@@ -67,6 +77,7 @@ export class PointSelection {
     this.onRenderRequest();
   }
 
+  /** Keep highlight sprite size in sync when point size slider changes. */
   updateHighlightSize(pointSizeMultiplier) {
     if (!this.highlight || this.selectedIndex === null) return;
     this.highlight.material.size =
@@ -75,6 +86,7 @@ export class PointSelection {
       SELECTION.highlightSizeMultiplier;
   }
 
+  /** Blend brightened original color with the warm accent tint. */
   #getSelectedColor(r, g, b) {
     const brightR = Math.min(1, r * SELECTION.brighten);
     const brightG = Math.min(1, g * SELECTION.brighten);
@@ -89,6 +101,7 @@ export class PointSelection {
     ];
   }
 
+  /** Lazily create the single-point overlay mesh. */
   #ensureHighlight() {
     if (this.highlight) return;
 
@@ -104,6 +117,7 @@ export class PointSelection {
       sizeAttenuation: true,
       transparent: true,
       opacity: 1,
+      depthTest: false,
       depthWrite: false,
     });
 
@@ -142,6 +156,7 @@ export class PointSelection {
     }
   }
 
+  /** Pulse the overlay opacity; skipped when prefers-reduced-motion is active. */
   #startBlink() {
     if (!this.highlight) return;
 

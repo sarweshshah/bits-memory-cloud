@@ -1,3 +1,7 @@
+/**
+ * Pointer hover, click-to-focus, and go-to-point interaction.
+ * Coordinates raycasting, selection visuals, camera animation, tooltips, and URL state.
+ */
 import * as THREE from "three";
 import { INTERACTION } from "../constants.js";
 import {
@@ -29,10 +33,10 @@ export class PointInteraction {
     this.onRenderRequest = onRenderRequest;
 
     this.raycaster = new THREE.Raycaster();
-    this.pointer = new THREE.Vector2();
+    this.pointer = new THREE.Vector2(); // Normalized device coordinates
     this.hoveredIndex = -1;
-    this.pointerDownPos = null;
-    this.focusSession = null;
+    this.pointerDownPos = null; // Used to distinguish clicks from drags
+    this.focusSession = null; // Active focus state with saved camera for dismiss
   }
 
   get isFocused() {
@@ -46,6 +50,10 @@ export class PointInteraction {
     this.canvas.addEventListener("pointerleave", () => this.#hideHoverTooltip());
   }
 
+  /**
+   * Exit focus mode: restore camera, clear selection, update URL.
+   * Skips URL push when triggered by browser back/forward.
+   */
   dismissFocus({ fromHistory = false } = {}) {
     if (!this.focusSession) return;
 
@@ -66,6 +74,10 @@ export class PointInteraction {
     });
   }
 
+  /**
+   * Navigate to a point by index (from form submit or URL deep link).
+   * Validates range and syncs the go-to form input.
+   */
   goToPoint(rawId, { fromHistory = false } = {}) {
     if (!this.pointCloud.ready) return;
 
@@ -91,20 +103,29 @@ export class PointInteraction {
     this.cameraController.logSettings("Camera (go to point)");
   }
 
+  /** Reposition the focused tooltip after the camera has settled. */
   updateFocusedTooltip() {
-    if (!this.focusSession) return;
+    if (!this.focusSession || !this.tooltip.isVisible) return;
     const { x, y } = this.pointCloud.projectToScreen(
       this.focusSession.index,
       this.camera,
       this.canvas
     );
-    this.tooltip.updatePosition(x, y);
+    const anchorRadius = this.pointCloud.getHighlightScreenRadius(
+      this.focusSession.index,
+      this.camera,
+      this.canvas,
+      this.params.pointSize
+    );
+    this.tooltip.updatePosition(x, y, { anchorRadius });
   }
 
+  /** Raycast hit radius scales with rendered point size. */
   #getRaycastThreshold() {
     return this.pointCloud.basePointSize * this.params.pointSize * 2;
   }
 
+  /** Convert a pointer event to NDC (-1 to 1) for raycasting. */
   #updatePointerFromEvent(event) {
     const rect = this.canvas.getBoundingClientRect();
     this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -120,6 +141,7 @@ export class PointInteraction {
     );
   }
 
+  /** Show the dismissible tooltip anchored to the selected point on screen. */
   #showFocusedTooltip(index) {
     this.hoveredIndex = index;
     const screen = this.pointCloud.projectToScreen(
@@ -127,15 +149,29 @@ export class PointInteraction {
       this.camera,
       this.canvas
     );
+    const anchorRadius = this.pointCloud.getHighlightScreenRadius(
+      index,
+      this.camera,
+      this.canvas,
+      this.params.pointSize
+    );
     this.tooltip.showAt(
       screen.x,
       screen.y,
       this.pointCloud.getPointData(index),
-      { dismissible: true, onDismiss: () => this.dismissFocus() }
+      {
+        dismissible: true,
+        onDismiss: () => this.dismissFocus(),
+        anchorRadius,
+      }
     );
     this.onRenderRequest();
   }
 
+  /**
+   * Enter focus mode: save camera, highlight point, freeze orbit, animate in.
+   * Updates URL unless navigating via history.
+   */
   #enterSelection(index, { fromHistory = false } = {}) {
     if (!this.focusSession) {
       this.focusSession = {
@@ -154,15 +190,17 @@ export class PointInteraction {
     this.cameraController.setViewFrozen(true, this.params.autoRotate);
     this.canvas.style.cursor = "default";
 
-    this.#showFocusedTooltip(index);
+    this.tooltip.hide();
 
     const worldPos = this.pointCloud.getWorldPosition(index);
-    const snapState = this.cameraController.getSnapState(worldPos);
-    this.cameraController.animateTo(
-      snapState,
-      () => this.onRenderRequest(),
-      () => this.updateFocusedTooltip()
-    );
+    const snapState = this.cameraController.getSnapState(worldPos, {
+      pointCloud: this.pointCloud,
+      pointIndex: index,
+      pointSizeMultiplier: this.params.pointSize,
+    });
+    this.cameraController.animateTo(snapState, () => {
+      this.#showFocusedTooltip(index);
+    });
   }
 
   #hideHoverTooltip() {
@@ -172,6 +210,7 @@ export class PointInteraction {
     this.canvas.style.cursor = "";
   }
 
+  /** Hover tooltip — disabled while a point is focused. */
   #onPointerMove(event) {
     if (!this.pointCloud.ready || this.focusSession) return;
 
@@ -204,6 +243,10 @@ export class PointInteraction {
     this.pointerDownPos = { x: event.clientX, y: event.clientY };
   }
 
+  /**
+   * Click handler: dismiss focus, or select a point if pointer didn't drag.
+   * Drag threshold prevents accidental selection after orbit panning.
+   */
   #onPointerUp(event) {
     if (!this.pointCloud.ready || !this.pointerDownPos) return;
 

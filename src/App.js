@@ -1,3 +1,7 @@
+/**
+ * Root application orchestrator.
+ * Wires together scene, camera, point cloud, interaction, UI, and the render loop.
+ */
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import gsap from "gsap";
@@ -30,6 +34,7 @@ export class App {
     this.#start();
   }
 
+  /** Grab DOM refs and construct UI overlay components. */
   #initDom() {
     this.canvas = document.getElementById("canvas");
     this.overlay = new LoadingOverlay({
@@ -50,6 +55,7 @@ export class App {
     this.overlay.initAnimations();
   }
 
+  /** Shared reactive state consumed by lil-gui and subsystems. */
   #initParams() {
     this.params = {
       pointSize: 1,
@@ -123,6 +129,7 @@ export class App {
     this.goToForm.setup((id) => this.interaction.goToPoint(id));
   }
 
+  /** Build lil-gui panel and connect callbacks to subsystems. */
   #initControls() {
     this.controlPanel = new ControlPanel(this.params, {
       onPointSizeChange: () => this.#applyPointSize(),
@@ -156,6 +163,7 @@ export class App {
     });
   }
 
+  /** Handle browser back/forward for ?point= deep links. */
   #onPopState() {
     if (!this.pointCloud.ready) return;
 
@@ -202,6 +210,7 @@ export class App {
     this.sceneManager.resize(this.camera);
   }
 
+  /** Load PLY, fit camera, enable UI, and restore deep-linked point if present. */
   #loadPointCloud() {
     this.pointCloud.load(POINT_CLOUD.url, {
       onProgress: (pct) => {
@@ -215,6 +224,7 @@ export class App {
         );
         this.#updateHelpers();
 
+        // Scale base point size relative to cloud extent
         this.pointCloud.basePointSize =
           this.cameraController.boundingRadius * 0.0018;
         this.#applyPointSize();
@@ -224,6 +234,7 @@ export class App {
         this.overlay.hide();
         this.sceneManager.requestRender();
 
+        // Deep link: ?point=N
         const index = getSelectedPoint();
         if (index !== null) {
           this.interaction.goToPoint(index, { fromHistory: true });
@@ -236,6 +247,10 @@ export class App {
     });
   }
 
+  /**
+   * Demand-driven render loop.
+   * Only draws when controls move, camera animates, selection blinks, or focus is active.
+   */
   #animate() {
     requestAnimationFrame(() => this.#animate());
 

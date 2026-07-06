@@ -1,16 +1,22 @@
+/**
+ * Three.js scene, renderer, and on-demand render loop state.
+ * Uses demand-driven rendering — only draws when something changes.
+ */
 import * as THREE from "three";
 import { DEFAULT_SCENE } from "../constants.js";
 
 export class SceneManager {
   constructor(canvas) {
     this.canvas = canvas;
-    this.needsRender = true;
+    this.needsRender = true; // Flag consumed by App's animation loop
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x050508);
 
+    // Fog is toggled on/off via setFog; pre-created for reuse
     this.fog = new THREE.FogExp2(0x050508, 0.0018);
 
+    // All point cloud geometry lives in this group for easy bounding-box queries
     this.pointCloudGroup = new THREE.Group();
     this.scene.add(this.pointCloudGroup);
 
@@ -24,6 +30,7 @@ export class SceneManager {
     this.renderer.toneMappingExposure = DEFAULT_SCENE.toneMappingExposure;
   }
 
+  /** Mark the next animation frame as needing a draw call. */
   requestRender() {
     this.needsRender = true;
   }
@@ -39,6 +46,7 @@ export class SceneManager {
     this.requestRender();
   }
 
+  /** Update camera aspect and renderer size on window resize. */
   resize(camera) {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();

@@ -1,6 +1,10 @@
+/**
+ * Manages optional scene helpers: axes, ground grid, and point cloud bounding box.
+ * Helpers are recreated on each update to match the current bounding radius.
+ */
 import * as THREE from "three";
 
-const _box = new THREE.Box3();
+const _box = new THREE.Box3(); // Reused for bounding box computation
 
 export class HelpersManager {
   constructor(scene) {
@@ -10,9 +14,14 @@ export class HelpersManager {
     this.bbox = null;
   }
 
+  /**
+   * Toggle helpers based on GUI params.
+   * Disposes removed helpers to avoid GPU memory leaks.
+   */
   update({ showAxes, showGrid, showBbox, boundingRadius, pointCloudGroup }) {
     const size = boundingRadius * 2;
 
+    // Tear down existing helpers
     if (this.axes) {
       this.scene.remove(this.axes);
       this.axes.dispose();

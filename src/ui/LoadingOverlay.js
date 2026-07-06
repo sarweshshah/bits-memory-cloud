@@ -1,3 +1,7 @@
+/**
+ * Full-screen loading overlay shown while the PLY point cloud is fetched.
+ * Respects prefers-reduced-motion for all GSAP animations.
+ */
 import gsap from "gsap";
 
 export class LoadingOverlay {
@@ -7,9 +11,10 @@ export class LoadingOverlay {
     this.progressFill = progressFill;
     this.overlayTitle = overlayTitle;
     this.progressBar = progressBar;
-    this.reduceMotion = false;
+    this.reduceMotion = false; // Set by matchMedia in initAnimations
   }
 
+  /** Set up entrance animations and reduced-motion detection. */
   initAnimations() {
     const media = gsap.matchMedia();
 
@@ -31,6 +36,7 @@ export class LoadingOverlay {
           return;
         }
 
+        // Staggered fade-in of overlay elements
         gsap.from(this.overlayTitle, {
           autoAlpha: 0,
           y: 14,
@@ -54,6 +60,7 @@ export class LoadingOverlay {
     );
   }
 
+  /** Update status text with a subtle pulse animation. */
   setStatus(text) {
     if (this.statusEl.textContent === text) return;
     this.statusEl.textContent = text;
@@ -73,6 +80,7 @@ export class LoadingOverlay {
     );
   }
 
+  /** Animate the progress bar fill (0–1). */
   setProgress(pct) {
     gsap.to(this.progressFill, {
       scaleX: Math.min(1, pct),
@@ -82,6 +90,7 @@ export class LoadingOverlay {
     });
   }
 
+  /** Fade out and hide the overlay once loading completes. */
   hide() {
     gsap.to(this.overlay, {
       autoAlpha: 0,

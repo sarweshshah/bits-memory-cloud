@@ -1,3 +1,6 @@
+/**
+ * "Go to point" form in the UI — lets users jump to a point by index.
+ */
 export class GoToForm {
   constructor({ form, input, button }) {
     this.form = form;
@@ -5,6 +8,7 @@ export class GoToForm {
     this.button = button;
   }
 
+  /** Wire submit handler and clear invalid state on input. */
   setup(onSubmit) {
     this.form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -16,6 +20,7 @@ export class GoToForm {
     });
   }
 
+  /** Enable the form once the point cloud is loaded (0-based index range). */
   enable(maxIndex) {
     this.input.disabled = false;
     this.button.disabled = false;
@@ -26,6 +31,7 @@ export class GoToForm {
     this.input.value = String(value);
   }
 
+  /** Visual feedback when the entered index is out of range. */
   markInvalid() {
     this.input.classList.add("invalid");
   }
