@@ -113,6 +113,14 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+#point-tooltip.hide-coords .tooltip-coords {
+  display: none;
+}
+
+#point-tooltip.hide-coords .tooltip-header {
+  margin-bottom: 0;
+}
+
 #point-tooltip .axis-x {
   color: #ff4466;
 }

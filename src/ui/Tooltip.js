@@ -19,9 +19,14 @@ const FOCUSED_PLACEMENTS = [
 ];
 
 export class Tooltip {
-  constructor(element, { getReduceMotion } = {}) {
+  constructor(
+    element,
+    { getReduceMotion, getShowCoordinates, onVisibilityChange } = {}
+  ) {
     this.element = element;
     this.getReduceMotion = getReduceMotion ?? (() => false);
+    this.getShowCoordinates = getShowCoordinates ?? (() => true);
+    this.onVisibilityChange = onVisibilityChange ?? (() => {});
     this.activeTween = null;
     this.isFocusedMode = false; // Dismissible tooltip anchored to a selected point
     this.cachedSize = null; // Avoid layout thrashing during position updates
@@ -41,6 +46,12 @@ export class Tooltip {
       duration: 0.28,
       ease: "power3.out",
     });
+  }
+
+  /** Sync the CSS class that hides the coordinates row (takes effect on next show). */
+  setShowCoordinates(show) {
+    this.element.classList.toggle("hide-coords", !show);
+    this.#invalidateSize();
   }
 
   buildHtml(data, { dismissible = false } = {}) {
@@ -268,6 +279,7 @@ export class Tooltip {
     this.isFocusedMode = dismissible;
     this.element.hidden = false;
     this.element.classList.toggle("focused", dismissible);
+    this.setShowCoordinates(this.getShowCoordinates());
     this.element.innerHTML = this.buildHtml(data, { dismissible });
     this.#invalidateSize();
     this.#refreshSize();
@@ -280,6 +292,7 @@ export class Tooltip {
     }
 
     if (!wasVisible) {
+      this.onVisibilityChange(true);
       this.#animateIn({ focused: dismissible });
     } else if (dismissible && !wasFocused) {
       this.#promoteToFocused();
@@ -340,6 +353,7 @@ export class Tooltip {
       scale: 0.97,
       y: 0,
     });
+    this.onVisibilityChange(false);
   }
 
   get isVisible() {

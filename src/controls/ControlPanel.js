@@ -22,6 +22,7 @@ export class ControlPanel {
     this.snapshotEnabled = false;
     this.pointCountController = null;
     this.recordingStatusController = null;
+    this.showTooltipCoordsController = null;
   }
 
   /** Build the GUI tree and return camera controller refs for bidirectional sync. */
@@ -63,6 +64,13 @@ export class ControlPanel {
       .add(this.params, "showBbox")
       .name("Bounding box")
       .onChange(() => this.callbacks.onHelpersChange());
+
+    // --- Tooltip content options (disabled while a tooltip is open) ---
+    const tooltipFolder = this.gui.addFolder("Tooltip");
+    this.showTooltipCoordsController = tooltipFolder
+      .add(this.params, "showTooltipCoords")
+      .name("Coordinates")
+      .onChange(() => this.callbacks.onShowTooltipCoordsChange());
 
     // --- Camera orbit controls ---
     const cameraFolder = this.gui.addFolder("Camera");
@@ -133,6 +141,11 @@ export class ControlPanel {
   updatePointCount(count) {
     this.params.pointCount = count.toLocaleString();
     this.pointCountController?.updateDisplay();
+  }
+
+  /** Lock tooltip data options while a hover/focused tooltip is visible. */
+  setTooltipOptionsEnabled(enabled) {
+    this.showTooltipCoordsController?.disable(!enabled);
   }
 
   /** Sync recording controls with current capture state. */

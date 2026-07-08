@@ -51,6 +51,10 @@ export class App {
     });
     this.tooltip = new Tooltip(document.getElementById("point-tooltip"), {
       getReduceMotion: () => this.overlay.reduceMotion,
+      getShowCoordinates: () => this.params?.showTooltipCoords ?? true,
+      onVisibilityChange: (visible) => {
+        this.controlPanel?.setTooltipOptionsEnabled(!visible);
+      },
     });
     this.goToForm = new GoToForm({
       form: document.getElementById("goto-form"),
@@ -73,6 +77,7 @@ export class App {
       showAxes: false,
       showGrid: false,
       showBbox: false,
+      showTooltipCoords: true,
       pointCount: "—",
       zoomDistance: DEFAULT_CAMERA.zoomDistance,
       roll: DEFAULT_CAMERA.roll,
@@ -81,6 +86,7 @@ export class App {
       recordingFps: RECORDING.defaultFps,
       recordingStatus: "Idle",
     };
+    this.tooltip.setShowCoordinates(this.params.showTooltipCoords);
   }
 
   #initScene() {
@@ -150,6 +156,9 @@ export class App {
       },
       onFogChange: (v) => this.sceneManager.setFog(v),
       onHelpersChange: () => this.#updateHelpers(),
+      onShowTooltipCoordsChange: () => {
+        this.tooltip.setShowCoordinates(this.params.showTooltipCoords);
+      },
       onZoomDistanceChange: (v) => this.cameraController.setDistance(v),
       onYawChange: (v) => this.cameraController.setYaw(v),
       onPitchChange: (v) => this.cameraController.setPitch(v),
