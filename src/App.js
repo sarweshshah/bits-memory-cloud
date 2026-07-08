@@ -388,21 +388,9 @@ export class App {
       this.cameraController.applyRoll();
     }
 
-    const elapsedSeconds = recordFrame
-      ? this.videoRecorder.frameTimeSeconds
-      : now / 1000;
-    const pointsAnimated = this.pointCloud.updatePointAnimation(
-      elapsedSeconds,
-      {
-        reduceMotion: this.overlay.reduceMotion,
-        disablePulse: isCapturing,
-      }
-    );
-
     const shouldRender =
       recordFrame ||
       this.sceneManager.needsRender ||
-      pointsAnimated ||
       controlsActive ||
       this.cameraController.isAnimating ||
       this.interaction.isFocused ||

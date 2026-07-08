@@ -1,6 +1,6 @@
 /**
- * Visual feedback for a selected point: dim all others, brighten the target,
- * and overlay a blinking highlight sprite on top.
+ * Visual feedback for hover and selection: overlay highlight, plus dim/brighten
+ * and blink pulse when a point is selected.
  */
 import * as THREE from "three";
 import gsap from "gsap";
@@ -14,6 +14,7 @@ export class PointSelection {
     this.getReduceMotion = getReduceMotion;
 
     this.selectedIndex = null;
+    this.hoveredIndex = null;
     this.highlight = null; // Separate Points mesh rendered on top
     this.blinkTween = null;
   }
@@ -28,6 +29,57 @@ export class PointSelection {
   }
 
   /**
+   * Static large overlay + warm accent on a hovered point (no dim, no blink).
+   * Overlay is semi-transparent so the accent vertex stays readable.
+   * No-op while a selection is active — focus owns the overlay.
+   */
+  hover(index, pointSizeMultiplier) {
+    if (this.selectedIndex !== null) return;
+    const mesh = this.pointCloud.mesh;
+    const originalColors = this.pointCloud.originalColors;
+    if (!mesh || !originalColors) return;
+
+    const colors = mesh.geometry.attributes.color;
+    if (this.hoveredIndex !== null && this.hoveredIndex !== index) {
+      this.#writeOriginalColor(colors.array, originalColors, this.hoveredIndex);
+      colors.addUpdateRange(this.hoveredIndex * 3, 3);
+    }
+
+    this.hoveredIndex = index;
+    this.#writeSelectedColor(colors.array, originalColors, index);
+    colors.addUpdateRange(index * 3, 3);
+    colors.needsUpdate = true;
+
+    this.#updateHighlight(index, pointSizeMultiplier);
+    this.highlight.material.opacity = SELECTION.hoverOverlayOpacity;
+    this.onRenderRequest();
+  }
+
+  /** Restore hover vertex color and hide overlay when nothing is selected. */
+  clearHover() {
+    if (this.selectedIndex !== null) {
+      this.hoveredIndex = null;
+      return;
+    }
+
+    const mesh = this.pointCloud.mesh;
+    const originalColors = this.pointCloud.originalColors;
+    if (mesh && originalColors && this.hoveredIndex !== null) {
+      const colors = mesh.geometry.attributes.color;
+      this.#writeOriginalColor(colors.array, originalColors, this.hoveredIndex);
+      colors.addUpdateRange(this.hoveredIndex * 3, 3);
+      colors.needsUpdate = true;
+    }
+
+    this.hoveredIndex = null;
+    if (this.highlight) {
+      this.highlight.visible = false;
+      this.highlight.material.opacity = 1;
+    }
+    this.onRenderRequest();
+  }
+
+  /**
    * Highlight a point by index: dim non-selected vertices, brighten selected,
    * and show the overlay blink sprite.
    * Point-to-point switches only touch the two affected vertices.
@@ -37,11 +89,16 @@ export class PointSelection {
     const originalColors = this.pointCloud.originalColors;
     if (!mesh || !originalColors) return;
 
+    // Drop hover ownership; select rewrites colors (including prior hover vertex)
+    this.hoveredIndex = null;
+
     const colors = mesh.geometry.attributes.color;
     const previousIndex = this.selectedIndex;
 
     if (previousIndex === null) {
-      // First selection: dim every non-selected vertex
+      // First selection: dim every non-selected vertex.
+      // Clear hover-left updateRanges so the GPU uploads the full buffer.
+      colors.clearUpdateRanges();
       const count = originalColors.length / 3;
       for (let i = 0; i < count; i++) {
         const j = i * 3;
@@ -97,6 +154,14 @@ export class PointSelection {
     target[j + 2] = sb;
   }
 
+  /** Restore a single vertex to its original PLY color. */
+  #writeOriginalColor(target, originalColors, index) {
+    const j = index * 3;
+    target[j] = originalColors[j];
+    target[j + 1] = originalColors[j + 1];
+    target[j + 2] = originalColors[j + 2];
+  }
+
   /** Restore original vertex colors and hide the highlight overlay. */
   reset() {
     const mesh = this.pointCloud.mesh;
@@ -104,15 +169,19 @@ export class PointSelection {
     if (!mesh || !originalColors || this.selectedIndex === null) return;
 
     this.selectedIndex = null;
-    mesh.geometry.attributes.color.array.set(originalColors);
-    mesh.geometry.attributes.color.needsUpdate = true;
+    this.hoveredIndex = null;
+    const colors = mesh.geometry.attributes.color;
+    colors.clearUpdateRanges();
+    colors.array.set(originalColors);
+    colors.needsUpdate = true;
     this.#stopBlink();
     this.onRenderRequest();
   }
 
   /** Keep highlight sprite size in sync when point size slider changes. */
   updateHighlightSize(pointSizeMultiplier) {
-    if (!this.highlight || this.selectedIndex === null) return;
+    if (!this.highlight) return;
+    if (this.selectedIndex === null && this.hoveredIndex === null) return;
     this.highlight.material.size =
       this.pointCloud.basePointSize *
       pointSizeMultiplier *

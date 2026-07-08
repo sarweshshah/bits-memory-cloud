@@ -8,8 +8,6 @@ import * as THREE from "three";
 export const POINT_CLOUD = {
   url: "/cloud_web.ply",
   colorBrightness: 1.5, // Multiplier applied to vertex colors in the material
-  pulseAmplitude: 0.1, // Point-size shimmer (+/- 10%)
-  pulseFrequencyHz: 0.1, // One full pulse every 10 seconds
 };
 
 /** OrbitControls behavior. */
@@ -53,6 +51,7 @@ export const SELECTION = {
   mix: 0.5, // Blend ratio between brightened color and accent
   highlightSizeMultiplier: 5, // Overlay point size relative to base
   highlightScreenPadding: 4, // Extra px clearance for tooltip placement
+  hoverOverlayOpacity: 0.75, // Semi-transparent so warm accent reads through
 };
 
 /** Pointer interaction thresholds. */

@@ -71,6 +71,7 @@ export class PointInteraction {
     this.goToForm.clearInvalid();
     this.tooltip.hide();
     this.hoveredIndex = -1;
+    this.selection.clearHover();
     this.selection.reset();
 
     if (!fromHistory) {
@@ -175,6 +176,7 @@ export class PointInteraction {
    */
   #enterSelection(index, { fromHistory = false } = {}) {
     this.#cancelHoverRaycast();
+    this.selection.clearHover();
 
     if (!this.focusSession) {
       this.focusSession = {
@@ -202,6 +204,7 @@ export class PointInteraction {
     this.#cancelHoverRaycast();
     this.tooltip.hide();
     this.hoveredIndex = -1;
+    this.selection.clearHover();
     this.canvas.style.cursor = "";
   }
 
@@ -244,6 +247,7 @@ export class PointInteraction {
       if (this.hoveredIndex !== -1) {
         this.tooltip.hide();
         this.hoveredIndex = -1;
+        this.selection.clearHover();
         this.canvas.style.cursor = "";
       }
       return;
@@ -257,6 +261,7 @@ export class PointInteraction {
 
     this.hoveredIndex = index;
     this.canvas.style.cursor = "pointer";
+    this.selection.hover(index, this.params.pointSize);
     this.tooltip.showAt(
       event.clientX,
       event.clientY,
@@ -294,7 +299,11 @@ export class PointInteraction {
     if (hits.length > 0) {
       this.#enterSelection(hits[0].index);
     } else {
+      this.hoveredIndex = -1;
+      this.selection.clearHover();
       this.selection.reset();
+      this.canvas.style.cursor = "";
+      this.tooltip.hide();
     }
   }
 }

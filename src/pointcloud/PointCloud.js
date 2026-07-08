@@ -5,7 +5,6 @@
 import * as THREE from "three";
 import { PLYLoader } from "three/addons/loaders/PLYLoader.js";
 import { POINT_CLOUD, SELECTION } from "../constants.js";
-import { getAnimatedPointSize } from "./PointAnimation.js";
 
 // Module-level scratch vectors to avoid per-frame allocations
 const _pointWorld = new THREE.Vector3();
@@ -112,26 +111,6 @@ export class PointCloud {
   applyOpacity(opacity) {
     if (!this.mesh) return;
     this.mesh.material.opacity = opacity;
-  }
-
-  updatePointAnimation(
-    elapsedSeconds,
-    { reduceMotion = false, disablePulse = false } = {}
-  ) {
-    if (!this.mesh) return false;
-
-    this.mesh.material.size = getAnimatedPointSize(
-      this.basePointSize,
-      this.pointSizeMultiplier,
-      elapsedSeconds,
-      {
-        amplitude: POINT_CLOUD.pulseAmplitude,
-        frequencyHz: POINT_CLOUD.pulseFrequencyHz,
-        enabled: !reduceMotion && !disablePulse,
-      }
-    );
-
-    return !reduceMotion && !disablePulse;
   }
 
   /** Return point index and local-space coordinates. */
