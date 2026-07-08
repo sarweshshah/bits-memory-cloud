@@ -205,20 +205,26 @@ body {
 #goto-form button {
   min-width: 2rem;
   padding: 0.38rem 0.6rem;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(107, 140, 255, 0.55), rgba(167, 139, 250, 0.72));
+  background: rgba(255, 255, 255, 0.12);
   color: #f8f7ff;
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.03em;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
 }
 
 #goto-form button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(108, 114, 200, 0.35);
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+}
+
+#goto-form button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 2px;
 }
 
 #goto-form button:disabled,
