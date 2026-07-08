@@ -132,67 +132,6 @@ def sample_triangle_batch(verts, uvs, i0, i1, i2, uv0, uv1, uv2, n_samples, rng)
     return pts, tuv
 
 
-def rotate_x(points, degrees):
-    """Rotate points degrees around the X axis."""
-    if degrees == 0:
-        return points
-    a = np.radians(degrees)
-    rx = np.array([
-        [1, 0, 0],
-        [0, np.cos(a), -np.sin(a)],
-        [0, np.sin(a), np.cos(a)],
-    ], dtype=np.float64)
-    return (rx @ points.T).T
-
-
-def default_view_forward(yaw_deg=-60):
-    """Camera forward axis matching the Three.js default view."""
-    pos = np.array([0.35, 0.25, 0.85], dtype=np.float64)
-    pos /= np.linalg.norm(pos)
-    yaw = np.radians(yaw_deg)
-    ry = np.array([
-        [np.cos(yaw), 0, np.sin(yaw)],
-        [0, 1, 0],
-        [-np.sin(yaw), 0, np.cos(yaw)],
-    ], dtype=np.float64)
-    pos = ry @ pos
-    return -pos / np.linalg.norm(pos)
-
-
-def rotate_axis(points, axis, degrees):
-    """Rotate points around an arbitrary axis (Rodrigues)."""
-    if degrees == 0:
-        return points
-    axis = np.asarray(axis, dtype=np.float64)
-    axis /= np.linalg.norm(axis)
-    a = np.radians(degrees)
-    k = np.array([
-        [0, -axis[2], axis[1]],
-        [axis[2], 0, -axis[0]],
-        [-axis[1], axis[0], 0],
-    ], dtype=np.float64)
-    r = np.eye(3) + np.sin(a) * k + (1 - np.cos(a)) * (k @ k)
-    return (r @ points.T).T
-
-
-ORIGIN_Y_OFFSET = -16.9
-
-
-def center_origin_at_peak_xz(points):
-    """Translate so origin X/Z match the highest-Y point; origin Y at bbox center."""
-    peak_idx = int(np.argmax(points[:, 1]))
-    peak_x = points[peak_idx, 0]
-    peak_z = points[peak_idx, 2]
-    center_y = (points[:, 1].min() + points[:, 1].max()) * 0.5 + ORIGIN_Y_OFFSET
-    offset = np.array([peak_x, center_y, peak_z], dtype=np.float64)
-    print(
-        f"Centering origin at peak XZ ({peak_x:.3f}, {peak_z:.3f}), "
-        f"Y {center_y:.3f} (bbox center {center_y - ORIGIN_Y_OFFSET:.3f}, "
-        f"offset {ORIGIN_Y_OFFSET:+.1f})"
-    )
-    return points - offset
-
-
 def write_ply_binary(path, points, colors):
     n = len(points)
     header = (
@@ -263,12 +202,6 @@ def main():
     parser.add_argument("--samples-per-face", type=int, default=10,
                         help="Points per triangle (10 => ~8.9M points)")
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--rotate-x", type=float, default=-90,
-                        help="Bake rotation around X axis into output (default: -90)")
-    parser.add_argument("--roll", type=float, default=2,
-                        help="Bake roll around default view axis in degrees (default: 2)")
-    parser.add_argument("--camera-yaw", type=float, default=-60,
-                        help="Camera yaw used to compute roll axis (default: -60)")
     parser.add_argument("--web-out", default=str(assets / "cloud_web.ply"),
                         help="Optional subsampled PLY for web viewing")
     parser.add_argument("--web-step", type=int, default=4,
@@ -323,17 +256,6 @@ def main():
 
     points = np.vstack(all_pts)
     colors = np.vstack(all_cols)
-
-    if args.rotate_x:
-        print(f"Applying {args.rotate_x:+.0f}° rotation around X axis...")
-        points = rotate_x(points, args.rotate_x)
-
-    if args.roll:
-        axis = default_view_forward(args.camera_yaw)
-        print(f"Applying {args.roll:+.1f}° roll around view axis {axis}...")
-        points = rotate_axis(points, axis, args.roll)
-
-    points = center_origin_at_peak_xz(points)
 
     print(f"Writing {len(points):,} points -> {out_path}")
     write_ply_binary(out_path, points, colors)

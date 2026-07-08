@@ -204,6 +204,8 @@ export class CameraController {
 
   /**
    * Frame the point cloud and store default pose for reset.
+   * Landing pose is driven by yaw/pitch/zoomDistance so Cartesian
+   * position snapshots cannot drift the orbit distance.
    * Returns bounding radius for helper sizing and point size scaling.
    */
   fitToObject(object, settings) {
@@ -211,24 +213,32 @@ export class CameraController {
     _box.getSize(_size);
     this.boundingRadius = _size.length() * 0.5;
 
+    this.camera.fov = settings.fov;
+    this.camera.updateProjectionMatrix();
+    this.controls.target.copy(settings.target);
+
+    this.params.zoomDistance = settings.zoomDistance;
+    this.params.roll = settings.roll;
     this.defaultRoll = settings.roll;
 
-    this.applySettings(settings);
-    this.setDistance(settings.zoomDistance);
-    if (settings.yaw != null) {
-      this.setYaw(settings.yaw);
-    }
-    if (settings.pitch != null) {
-      this.setPitch(settings.pitch);
-    }
+    const yaw = settings.yaw ?? this.getYaw();
+    const pitch = settings.pitch ?? this.getPitch();
+    this.#applyOrbitAngles(yaw, pitch, settings.zoomDistance);
+    this.params.yaw = yaw;
+    this.params.pitch = pitch;
+    this.params.zoomDistance = this.getDistance();
+
     this.defaultCameraPos.copy(this.camera.position);
     this.defaultTarget.copy(this.controls.target);
     this.defaultYaw = this.params.yaw;
     this.defaultPitch = this.params.pitch;
-    this.syncYaw();
-    this.syncPitch();
+    this.yawController?.updateDisplay();
+    this.pitchController?.updateDisplay();
+    this.rollController?.updateDisplay();
+    this.zoomDistanceController?.updateDisplay();
     this.updateZoomLimits();
     this.logSettings("Camera (initial)");
+    this.onRenderRequest();
 
     return this.boundingRadius;
   }

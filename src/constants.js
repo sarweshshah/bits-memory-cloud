@@ -32,7 +32,7 @@ export const DEFAULT_SCENE = {
 /** Initial camera pose and coordinate display precision. */
 export const DEFAULT_CAMERA = {
   fov: 50,
-  position: new THREE.Vector3(-132.866, 45.298, 172.081),
+  position: new THREE.Vector3(178.74, 61.803, 65.056), // yaw 70°, pitch 18°, distance 200
   target: new THREE.Vector3(0, 0, 0),
   zoomDistance: 200,
   roll: 0,
