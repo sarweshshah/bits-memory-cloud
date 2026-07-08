@@ -17,11 +17,11 @@ Interactive 3D point cloud viewer built with [Three.js](https://threejs.org/), [
 
 ### Point interaction
 - Hover a point to see its ID and world coordinates in a tooltip
-- Click to enter focus mode — dims the cloud, highlights the point, and animates the camera
+- Click to enter focus mode — dims the cloud and highlights the point
 - **Go to Point ID** form to jump directly to a point by index
 - Shareable deep links via `?point=<id>` URL parameter (browser back/forward supported)
 - Press **Escape** or click the tooltip dismiss button to exit focus mode
-- Respects `prefers-reduced-motion` for camera and UI animations
+- Respects `prefers-reduced-motion` for UI animations
 
 ## Prerequisites
 
@@ -126,8 +126,8 @@ Place your mesh (`mesh.obj`, `mesh.mtl`) and texture images in `assets/`, then r
 
 ### Point selection
 - **Hover** — show point ID and coordinates
-- **Click** — focus on a point (camera snaps in, cloud dims)
-- **Escape** or tooltip **×** — dismiss focus and restore camera
+- **Click** — focus on a point (cloud dims, highlight blinks)
+- **Escape** or tooltip **×** — dismiss focus
 - **Go to Point ID** — enter an index and press Go (or Enter)
 - **URL** — append `?point=123` to link directly to a point
 

@@ -36,7 +36,7 @@ export class PointInteraction {
     this.pointer = new THREE.Vector2(); // Normalized device coordinates
     this.hoveredIndex = -1;
     this.pointerDownPos = null; // Used to distinguish clicks from drags
-    this.focusSession = null; // Active focus state with saved camera for dismiss
+    this.focusSession = null; // Active focus state while a point is selected
     // Cached by App on resize — avoids getBoundingClientRect on hot paths
     this.viewportRect = { left: 0, top: 0, width: 1, height: 1 };
     this.pendingPointerEvent = null; // Latest pointermove queued for rAF
@@ -60,13 +60,13 @@ export class PointInteraction {
   }
 
   /**
-   * Exit focus mode: restore camera, clear selection, update URL.
+   * Exit focus mode: clear selection visuals, unfreeze orbit, update URL.
+   * Camera is not restored — selection no longer moves it on enter.
    * Skips URL push when triggered by browser back/forward.
    */
   dismissFocus({ fromHistory = false } = {}) {
     if (!this.focusSession) return;
 
-    const saved = this.focusSession.savedCamera;
     this.focusSession = null;
     this.goToForm.clearInvalid();
     this.tooltip.hide();
@@ -78,10 +78,8 @@ export class PointInteraction {
       clearSelectedPoint();
     }
 
-    this.cameraController.animateTo(saved, () => {
-      this.cameraController.setViewFrozen(false, this.params.autoRotate);
-      this.cameraController.logSettings("Selection dismissed");
-    });
+    this.cameraController.setViewFrozen(false, this.params.autoRotate);
+    this.cameraController.logSettings("Selection dismissed");
   }
 
   /**
@@ -171,7 +169,7 @@ export class PointInteraction {
   }
 
   /**
-   * Enter focus mode: save camera, highlight point, freeze orbit, show tooltip.
+   * Enter focus mode: highlight point, freeze orbit, show tooltip.
    * Updates URL unless navigating via history.
    */
   #enterSelection(index, { fromHistory = false } = {}) {
@@ -179,10 +177,7 @@ export class PointInteraction {
     this.selection.clearHover();
 
     if (!this.focusSession) {
-      this.focusSession = {
-        index,
-        savedCamera: this.cameraController.captureState(),
-      };
+      this.focusSession = { index };
     } else {
       this.focusSession.index = index;
     }

@@ -8,9 +8,6 @@ import { DEFAULT_CAMERA } from "../constants.js";
 const TOOLTIP_OFFSET = 14; // px gap from cursor in hover mode
 const FOCUSED_TOOLTIP_GAP = 8; // px gap between tooltip edge and highlight ring
 const VIEWPORT_PADDING = 8; // Minimum distance from viewport edges
-const FOCUSED_PADDING_TOP = 21.6; // 1.35rem at 16px root — room for dismiss button
-const HOVER_PADDING_TOP = 8; // 0.5rem
-
 // Preferred side order for focused tooltip placement (index = preference weight)
 const FOCUSED_PLACEMENTS = [
   "right",
@@ -48,8 +45,10 @@ export class Tooltip {
 
   buildHtml(data, { dismissible = false } = {}) {
     return `
-      ${dismissible ? '<button type="button" class="tooltip-dismiss" aria-label="Dismiss">×</button>' : ""}
-      <div class="tooltip-id">#${data.id}</div>
+      <div class="tooltip-header">
+        <div class="tooltip-id">#${data.id}</div>
+        ${dismissible ? '<button type="button" class="tooltip-dismiss" aria-label="Dismiss">×</button>' : ""}
+      </div>
       <div class="tooltip-coords">
         x: ${data.x.toFixed(DEFAULT_CAMERA.coordDecimals)} &nbsp; y: ${data.y.toFixed(DEFAULT_CAMERA.coordDecimals)} &nbsp; z: ${data.z.toFixed(DEFAULT_CAMERA.coordDecimals)}
       </div>
@@ -175,7 +174,7 @@ export class Tooltip {
   #killActiveTween() {
     this.activeTween?.kill();
     this.activeTween = null;
-    gsap.killTweensOf(this.element, "left,top,paddingTop");
+    gsap.killTweensOf(this.element, "left,top");
   }
 
   /** Fade/scale in when the tooltip first appears. */
@@ -185,7 +184,6 @@ export class Tooltip {
         autoAlpha: 1,
         scale: 1,
         y: 0,
-        paddingTop: focused ? FOCUSED_PADDING_TOP : HOVER_PADDING_TOP,
       });
       return;
     }
@@ -197,7 +195,6 @@ export class Tooltip {
         autoAlpha: 0,
         scale: focused ? 0.97 : 0.94,
         y: focused ? 4 : 6,
-        paddingTop: focused ? FOCUSED_PADDING_TOP : HOVER_PADDING_TOP,
       },
       {
         autoAlpha: 1,
@@ -217,7 +214,6 @@ export class Tooltip {
         autoAlpha: 1,
         scale: 1,
         y: 0,
-        paddingTop: FOCUSED_PADDING_TOP,
       });
       return;
     }
@@ -225,12 +221,11 @@ export class Tooltip {
     this.#killActiveTween();
     this.activeTween = gsap.fromTo(
       this.element,
-      { scale: 0.985, paddingTop: HOVER_PADDING_TOP },
+      { scale: 0.985 },
       {
         autoAlpha: 1,
         scale: 1,
         y: 0,
-        paddingTop: FOCUSED_PADDING_TOP,
         duration: 0.34,
         ease: "power2.inOut",
         overwrite: true,
@@ -294,7 +289,6 @@ export class Tooltip {
         anchorRadius,
       });
     } else if (!dismissible && wasFocused) {
-      gsap.set(this.element, { paddingTop: HOVER_PADDING_TOP });
       this.#animateIn();
     } else if (!dismissible) {
       this.#animateContentSwap();
@@ -345,7 +339,6 @@ export class Tooltip {
     gsap.set(this.element, {
       scale: 0.97,
       y: 0,
-      paddingTop: HOVER_PADDING_TOP,
     });
   }
 
