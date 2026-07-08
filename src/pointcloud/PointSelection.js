@@ -30,38 +30,71 @@ export class PointSelection {
   /**
    * Highlight a point by index: dim non-selected vertices, brighten selected,
    * and show the overlay blink sprite.
+   * Point-to-point switches only touch the two affected vertices.
    */
   select(index, pointSizeMultiplier) {
     const mesh = this.pointCloud.mesh;
     const originalColors = this.pointCloud.originalColors;
     if (!mesh || !originalColors) return;
 
-    this.selectedIndex = index;
     const colors = mesh.geometry.attributes.color;
-    const count = originalColors.length / 3;
+    const previousIndex = this.selectedIndex;
 
-    for (let i = 0; i < count; i++) {
-      const j = i * 3;
-      const r = originalColors[j];
-      const g = originalColors[j + 1];
-      const b = originalColors[j + 2];
+    if (previousIndex === null) {
+      // First selection: dim every non-selected vertex
+      const count = originalColors.length / 3;
+      for (let i = 0; i < count; i++) {
+        const j = i * 3;
+        const r = originalColors[j];
+        const g = originalColors[j + 1];
+        const b = originalColors[j + 2];
 
-      if (i === index) {
-        const [sr, sg, sb] = this.#getSelectedColor(r, g, b);
-        colors.array[j] = sr;
-        colors.array[j + 1] = sg;
-        colors.array[j + 2] = sb;
-      } else {
-        colors.array[j] = r * SELECTION.dimFactor;
-        colors.array[j + 1] = g * SELECTION.dimFactor;
-        colors.array[j + 2] = b * SELECTION.dimFactor;
+        if (i === index) {
+          const [sr, sg, sb] = this.#getSelectedColor(r, g, b);
+          colors.array[j] = sr;
+          colors.array[j + 1] = sg;
+          colors.array[j + 2] = sb;
+        } else {
+          colors.array[j] = r * SELECTION.dimFactor;
+          colors.array[j + 1] = g * SELECTION.dimFactor;
+          colors.array[j + 2] = b * SELECTION.dimFactor;
+        }
       }
+      colors.needsUpdate = true;
+    } else if (previousIndex !== index) {
+      // Already focused: only the previous and new points change
+      this.#writeDimmedColor(colors.array, originalColors, previousIndex);
+      this.#writeSelectedColor(colors.array, originalColors, index);
+      colors.addUpdateRange(previousIndex * 3, 3);
+      colors.addUpdateRange(index * 3, 3);
+      colors.needsUpdate = true;
     }
 
-    colors.needsUpdate = true;
+    this.selectedIndex = index;
     this.#updateHighlight(index, pointSizeMultiplier);
     this.#startBlink();
     this.onRenderRequest();
+  }
+
+  /** Dim a single vertex back to the selection hinterground. */
+  #writeDimmedColor(target, originalColors, index) {
+    const j = index * 3;
+    target[j] = originalColors[j] * SELECTION.dimFactor;
+    target[j + 1] = originalColors[j + 1] * SELECTION.dimFactor;
+    target[j + 2] = originalColors[j + 2] * SELECTION.dimFactor;
+  }
+
+  /** Brighten a single vertex to the selected highlight color. */
+  #writeSelectedColor(target, originalColors, index) {
+    const j = index * 3;
+    const [sr, sg, sb] = this.#getSelectedColor(
+      originalColors[j],
+      originalColors[j + 1],
+      originalColors[j + 2]
+    );
+    target[j] = sr;
+    target[j + 1] = sg;
+    target[j + 2] = sb;
   }
 
   /** Restore original vertex colors and hide the highlight overlay. */

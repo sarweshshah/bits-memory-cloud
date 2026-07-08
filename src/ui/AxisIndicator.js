@@ -14,6 +14,7 @@ const CENTER = 24;
 const LENGTH = 15;
 
 const _dir = new THREE.Vector3();
+const _invCameraQuat = new THREE.Quaternion();
 
 export class AxisIndicator {
   constructor(element) {
@@ -23,9 +24,12 @@ export class AxisIndicator {
   }
 
   update(camera) {
+    // Convert world axes into camera view-space so the gizmo matches on-screen orientation.
+    _invCameraQuat.copy(camera.quaternion).invert();
+
     for (let i = 0; i < AXES.length; i++) {
       const axis = AXES[i];
-      _dir.copy(axis.vector).applyQuaternion(camera.quaternion);
+      _dir.copy(axis.vector).applyQuaternion(_invCameraQuat);
 
       const x2 = CENTER + _dir.x * LENGTH;
       const y2 = CENTER - _dir.y * LENGTH;

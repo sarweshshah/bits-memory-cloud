@@ -138,6 +138,18 @@ body {
   color: rgba(232, 232, 236, 0.85);
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 #goto-form {
   position: fixed;
   top: 1rem;
@@ -145,57 +157,73 @@ body {
   z-index: 15;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.55rem;
-  border-radius: 8px;
-  background: rgba(10, 10, 18, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
-  font-size: 0.75rem;
-}
-
-#goto-form label {
-  color: rgba(232, 232, 236, 0.55);
-  white-space: nowrap;
+  gap: 0.4rem;
+  padding: 0.3rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(9, 10, 17, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
 #goto-form input {
-  width: 6.5rem;
-  padding: 0.3rem 0.45rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.04);
-  color: #e8e8ec;
-  font-size: 0.75rem;
+  width: 5.6rem;
+  padding: 0.38rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(232, 232, 236, 0.96);
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+#goto-form input::-webkit-outer-spin-button,
+#goto-form input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+#goto-form input::placeholder {
+  color: rgba(232, 232, 236, 0.4);
 }
 
 #goto-form input:focus {
   outline: none;
-  border-color: rgba(167, 139, 250, 0.55);
+  border-color: rgba(167, 139, 250, 0.7);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 #goto-form input.invalid {
-  border-color: rgba(255, 100, 100, 0.65);
+  border-color: rgba(255, 100, 100, 0.75);
+  background: rgba(255, 100, 100, 0.08);
 }
 
 #goto-form button {
-  padding: 0.3rem 0.65rem;
+  min-width: 2rem;
+  padding: 0.38rem 0.6rem;
   border: none;
-  border-radius: 5px;
-  background: rgba(167, 139, 250, 0.22);
-  color: #e8e8ec;
-  font-size: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(107, 140, 255, 0.55), rgba(167, 139, 250, 0.72));
+  color: #f8f7ff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
 #goto-form button:hover:not(:disabled) {
-  background: rgba(167, 139, 250, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(108, 114, 200, 0.35);
 }
 
 #goto-form button:disabled,
 #goto-form input:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 

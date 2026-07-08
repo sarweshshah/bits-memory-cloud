@@ -11,6 +11,7 @@ import { getAnimatedPointSize } from "./PointAnimation.js";
 const _pointWorld = new THREE.Vector3();
 const _projected = new THREE.Vector3();
 const _viewPos = new THREE.Vector3();
+const _emptyRect = { left: 0, top: 0, width: 1, height: 1 };
 
 export class PointCloud {
   constructor(group) {
@@ -20,6 +21,13 @@ export class PointCloud {
     this.basePointSize = 0.12; // Recalculated after fit-to-object
     this.pointSizeMultiplier = 1;
     this.ready = false;
+    // Cached by App on resize — avoids getBoundingClientRect on hot paths
+    this.viewportRect = _emptyRect;
+  }
+
+  /** Refresh the cached canvas CSS rect used for screen projection. */
+  setViewportRect(rect) {
+    this.viewportRect = rect;
   }
 
   get geometry() {
@@ -137,21 +145,24 @@ export class PointCloud {
     };
   }
 
-  /** Transform a point's local position to world space. */
+  /**
+   * Transform a point's local position to world space.
+   * Returns a shared scratch vector — copy immediately if retaining the result.
+   */
   getWorldPosition(index) {
     const pos = this.geometry.attributes.position;
     _pointWorld.set(pos.getX(index), pos.getY(index), pos.getZ(index));
-    return this.mesh.localToWorld(_pointWorld.clone());
+    return this.mesh.localToWorld(_pointWorld);
   }
 
   /** Project a point index to CSS pixel coordinates relative to the viewport. */
-  projectToScreen(index, camera, canvas) {
-    return this.projectWorldToScreen(this.getWorldPosition(index), camera, canvas);
+  projectToScreen(index, camera) {
+    return this.projectWorldToScreen(this.getWorldPosition(index), camera);
   }
 
-  projectWorldToScreen(world, camera, canvas) {
+  projectWorldToScreen(world, camera) {
     _projected.copy(world).project(camera);
-    const rect = canvas.getBoundingClientRect();
+    const rect = this.viewportRect;
     return {
       x: (_projected.x * 0.5 + 0.5) * rect.width + rect.left,
       y: (-_projected.y * 0.5 + 0.5) * rect.height + rect.top,
@@ -162,7 +173,7 @@ export class PointCloud {
    * On-screen radius of the selection highlight (px), matching Three.js point sizing.
    * Includes a small buffer so the tooltip clears the soft sprite edge.
    */
-  getHighlightScreenRadius(index, camera, canvas, pointSizeMultiplier) {
+  getHighlightScreenRadius(index, camera, pointSizeMultiplier) {
     const world = this.getWorldPosition(index);
     const materialSize =
       this.basePointSize *
@@ -175,7 +186,8 @@ export class PointCloud {
 
     const vFov = THREE.MathUtils.degToRad(camera.fov);
     const diameterPx =
-      (materialSize * canvas.clientHeight) / (2 * Math.tan(vFov / 2) * viewZ);
+      (materialSize * this.viewportRect.height) /
+      (2 * Math.tan(vFov / 2) * viewZ);
 
     return diameterPx * 0.5 + SELECTION.highlightScreenPadding;
   }

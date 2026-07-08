@@ -20,6 +20,8 @@ export class ControlPanel {
     this.recordingState = "idle";
     this.recordingSupported = false;
     this.snapshotEnabled = false;
+    this.pointCountController = null;
+    this.recordingStatusController = null;
   }
 
   /** Build the GUI tree and return camera controller refs for bidirectional sync. */
@@ -91,7 +93,7 @@ export class ControlPanel {
     this.recordingFpsController = recordingFolder
       .add(this.params, "recordingFps", RECORDING.fpsSteps)
       .name("Frame rate");
-    recordingFolder
+    this.recordingStatusController = recordingFolder
       .add(this.params, "recordingStatus")
       .name("Status")
       .disable();
@@ -99,7 +101,10 @@ export class ControlPanel {
     recordingFolder.close();
 
     // Read-only display of loaded point count
-    this.gui.add(this.params, "pointCount").name("Points").disable();
+    this.pointCountController = this.gui
+      .add(this.params, "pointCount")
+      .name("Points")
+      .disable();
     this.gui.close();
 
     return {
@@ -127,7 +132,7 @@ export class ControlPanel {
   /** Refresh the formatted point count label in the GUI. */
   updatePointCount(count) {
     this.params.pointCount = count.toLocaleString();
-    this.gui.controllersRecursive().forEach((c) => c.updateDisplay());
+    this.pointCountController?.updateDisplay();
   }
 
   /** Sync recording controls with current capture state. */
@@ -151,7 +156,7 @@ export class ControlPanel {
       supported,
       snapshotEnabled: this.snapshotEnabled,
     });
-    this.gui.controllersRecursive().forEach((c) => c.updateDisplay());
+    this.recordingStatusController?.updateDisplay();
   }
 
   /** Enable snapshot once the scene is ready to render. */
@@ -178,6 +183,6 @@ export class ControlPanel {
       snapshotEnabled: this.snapshotEnabled,
       saving,
     });
-    this.gui.controllersRecursive().forEach((c) => c.updateDisplay());
+    this.recordingStatusController?.updateDisplay();
   }
 }

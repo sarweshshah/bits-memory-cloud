@@ -15,16 +15,17 @@
     <canvas id="canvas"></canvas>
     <div id="point-tooltip" hidden></div>
     <form id="goto-form" autocomplete="off">
-      <label for="goto-id">Go to Point ID</label>
+      <label for="goto-id" class="visually-hidden">Go to Point ID</label>
       <input
         type="number"
         id="goto-id"
         min="0"
         step="1"
         placeholder="Point ID"
+        aria-label="Go to Point ID"
         disabled
       />
-      <button type="submit" disabled>Go</button>
+      <button type="submit" aria-label="Go to point" disabled>Go</button>
     </form>
     <div id="axis-indicator" aria-hidden="true">
       <svg viewBox="0 0 48 48" width="48" height="48">

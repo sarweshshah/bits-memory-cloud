@@ -302,6 +302,9 @@ export class App {
 
   #onResize() {
     this.sceneManager.resize(this.camera);
+    const rect = this.canvas.getBoundingClientRect();
+    this.pointCloud.setViewportRect(rect);
+    this.interaction.setViewportRect(rect);
   }
 
   /** Load PLY, fit camera, enable UI, and restore deep-linked point if present. */

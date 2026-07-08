@@ -37,10 +37,19 @@ export class PointInteraction {
     this.hoveredIndex = -1;
     this.pointerDownPos = null; // Used to distinguish clicks from drags
     this.focusSession = null; // Active focus state with saved camera for dismiss
+    // Cached by App on resize — avoids getBoundingClientRect on hot paths
+    this.viewportRect = { left: 0, top: 0, width: 1, height: 1 };
+    this.pendingPointerEvent = null; // Latest pointermove queued for rAF
+    this.hoverRafId = 0; // Non-zero while a hover raycast is scheduled
   }
 
   get isFocused() {
     return this.focusSession !== null;
+  }
+
+  /** Refresh the cached canvas CSS rect used for pointer NDC conversion. */
+  setViewportRect(rect) {
+    this.viewportRect = rect;
   }
 
   setup() {
@@ -107,13 +116,11 @@ export class PointInteraction {
     if (!this.focusSession || !this.tooltip.isVisible) return;
     const { x, y } = this.pointCloud.projectToScreen(
       this.focusSession.index,
-      this.camera,
-      this.canvas
+      this.camera
     );
     const anchorRadius = this.pointCloud.getHighlightScreenRadius(
       this.focusSession.index,
       this.camera,
-      this.canvas,
       this.params.pointSize
     );
     this.tooltip.updatePosition(x, y, { anchorRadius });
@@ -126,7 +133,7 @@ export class PointInteraction {
 
   /** Convert a pointer event to NDC (-1 to 1) for raycasting. */
   #updatePointerFromEvent(event) {
-    const rect = this.canvas.getBoundingClientRect();
+    const rect = this.viewportRect;
     this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   }
@@ -143,15 +150,10 @@ export class PointInteraction {
   /** Show the dismissible tooltip anchored to the selected point on screen. */
   #showFocusedTooltip(index) {
     this.hoveredIndex = index;
-    const screen = this.pointCloud.projectToScreen(
-      index,
-      this.camera,
-      this.canvas
-    );
+    const screen = this.pointCloud.projectToScreen(index, this.camera);
     const anchorRadius = this.pointCloud.getHighlightScreenRadius(
       index,
       this.camera,
-      this.canvas,
       this.params.pointSize
     );
     this.tooltip.showAt(
@@ -172,6 +174,8 @@ export class PointInteraction {
    * Updates URL unless navigating via history.
    */
   #enterSelection(index, { fromHistory = false } = {}) {
+    this.#cancelHoverRaycast();
+
     if (!this.focusSession) {
       this.focusSession = {
         index,
@@ -195,20 +199,53 @@ export class PointInteraction {
 
   #hideHoverTooltip() {
     if (this.focusSession) return;
+    this.#cancelHoverRaycast();
     this.tooltip.hide();
     this.hoveredIndex = -1;
     this.canvas.style.cursor = "";
   }
 
-  /** Hover tooltip — disabled while a point is focused. */
+  /** Drop any queued hover raycast (e.g. on pointer leave or focus enter). */
+  #cancelHoverRaycast() {
+    if (this.hoverRafId) {
+      cancelAnimationFrame(this.hoverRafId);
+      this.hoverRafId = 0;
+    }
+    this.pendingPointerEvent = null;
+  }
+
+  /**
+   * Coalesce pointermove raycasts to one per animation frame.
+   * Browsers fire many pointermoves between paints; scanning the full cloud
+   * for each is wasteful — keep the latest event and process it once.
+   */
   #onPointerMove(event) {
+    if (!this.pointCloud.ready || this.focusSession) return;
+
+    this.pendingPointerEvent = event;
+    if (this.hoverRafId) return;
+
+    this.hoverRafId = requestAnimationFrame(() => {
+      this.hoverRafId = 0;
+      const pending = this.pendingPointerEvent;
+      this.pendingPointerEvent = null;
+      if (pending) this.#processHover(pending);
+    });
+  }
+
+  /** Hover tooltip — disabled while a point is focused. */
+  #processHover(event) {
     if (!this.pointCloud.ready || this.focusSession) return;
 
     this.#updatePointerFromEvent(event);
     const hits = this.#raycast();
 
     if (hits.length === 0) {
-      if (this.hoveredIndex !== -1) this.#hideHoverTooltip();
+      if (this.hoveredIndex !== -1) {
+        this.tooltip.hide();
+        this.hoveredIndex = -1;
+        this.canvas.style.cursor = "";
+      }
       return;
     }
 
