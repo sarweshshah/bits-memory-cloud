@@ -3,7 +3,7 @@
  * Bridges OrbitControls with lil-gui sliders and GSAP tweens for focus animations.
  */
 import * as THREE from "three";
-import { DEFAULT_CAMERA, SELECTION } from "../constants.js";
+import { DEFAULT_CAMERA } from "../constants.js";
 
 // Reusable scratch vectors (avoid GC pressure during orbit math)
 const _offset = new THREE.Vector3();
@@ -12,7 +12,6 @@ const _right = new THREE.Vector3();
 const _up = new THREE.Vector3();
 const _size = new THREE.Vector3();
 const _box = new THREE.Box3();
-const _pointWorld = new THREE.Vector3();
 
 export class CameraController {
   constructor(camera, controls, params, { getReduceMotion, onRenderRequest }) {
@@ -38,11 +37,46 @@ export class CameraController {
 
     controls.addEventListener("end", () => this.logSettings("Camera (orbit)"));
     controls.addEventListener("change", () => {
+      this.#enforcePitchLimit();
       this.syncZoomDistance();
       this.syncYaw();
       this.syncPitch();
       this.onRenderRequest();
     });
+
+    this.#applyPitchLimits();
+  }
+
+  /** Map elevation pitch (degrees) to OrbitControls polar angle (radians). */
+  #pitchToPolarAngle(pitchDeg) {
+    return Math.PI / 2 - THREE.MathUtils.degToRad(pitchDeg);
+  }
+
+  #clampPitch(pitchDeg) {
+    return THREE.MathUtils.clamp(
+      pitchDeg,
+      DEFAULT_CAMERA.minPitch,
+      DEFAULT_CAMERA.maxPitch
+    );
+  }
+
+  /** Sync OrbitControls polar limits with min/max pitch. */
+  #applyPitchLimits() {
+    this.controls.minPolarAngle = this.#pitchToPolarAngle(DEFAULT_CAMERA.maxPitch);
+    this.controls.maxPolarAngle = this.#pitchToPolarAngle(DEFAULT_CAMERA.minPitch);
+  }
+
+  /** Reposition the camera if orbit pitch falls outside allowed range. */
+  #enforcePitchLimit() {
+    const orbit = this.#readOrbitAngles();
+    if (!orbit) return;
+
+    const clamped = this.#clampPitch(orbit.pitch);
+    if (clamped === orbit.pitch) return;
+
+    this.#applyOrbitAngles(orbit.yaw, clamped, orbit.distance);
+    this.params.pitch = clamped;
+    this.pitchController?.updateDisplay();
   }
 
   /** Store GUI controller refs so orbit changes can update slider displays. */
@@ -70,6 +104,7 @@ export class CameraController {
 
   /** Position the camera at the given yaw/pitch/distance around the orbit target. */
   #applyOrbitAngles(yawDeg, pitchDeg, distance) {
+    pitchDeg = this.#clampPitch(pitchDeg);
     const yawRad = THREE.MathUtils.degToRad(yawDeg);
     const pitchRad = THREE.MathUtils.degToRad(pitchDeg);
     const horiz = distance * Math.cos(pitchRad);
@@ -210,6 +245,7 @@ export class CameraController {
     this.syncZoomDistance();
     this.syncYaw();
     this.syncPitch();
+    this.#enforcePitchLimit();
     this.logSettings("Camera (reset)");
     this.onRenderRequest();
   }
@@ -283,6 +319,7 @@ export class CameraController {
     const orbit = this.#readOrbitAngles();
     if (!orbit) return;
 
+    pitchDeg = this.#clampPitch(pitchDeg);
     this.#applyOrbitAngles(orbit.yaw, pitchDeg, orbit.distance);
     this.params.pitch = pitchDeg;
     this.logSettings("Camera (pitch)");
@@ -317,7 +354,7 @@ export class CameraController {
     }
   }
 
-  /** Smoothly tween camera to a target state via GSAP. */
+  /** Smoothly tween camera to a saved Cartesian pose (e.g. dismiss restore). */
   animateTo(state, onComplete, onUpdate) {
     const gsap = this._gsap;
     this.killTween();
@@ -348,7 +385,8 @@ export class CameraController {
         this.controls.target.set(tweenState.tx, tweenState.ty, tweenState.tz);
         this.params.roll = tweenState.roll;
         this.rollController?.updateDisplay();
-        this.applyRoll();
+        this.#syncCameraToTarget();
+        this.#enforcePitchLimit();
         this.syncZoomDistance();
         this.syncYaw();
         this.syncPitch();
@@ -356,103 +394,18 @@ export class CameraController {
         this.onRenderRequest();
       },
       onComplete: () => {
+        this.#syncCameraToTarget();
+        this.#enforcePitchLimit();
         this.cameraTween = null;
         onComplete?.();
       },
     });
   }
 
-  /**
-   * Compute a camera pose that frames a world-space point at focus distance.
-   * When pointCloud context is provided, picks the least-adjusted unobstructed view.
-   */
-  getSnapState(
-    worldPosition,
-    { pointCloud, pointIndex, pointSizeMultiplier } = {}
-  ) {
-    _pointWorld.copy(worldPosition);
-    const snapDistance = THREE.MathUtils.clamp(
-      SELECTION.focusDistance,
-      this.controls.minDistance,
-      this.controls.maxDistance
-    );
-
-    _offset.copy(this.camera.position).sub(this.controls.target);
-    if (_offset.lengthSq() < 1e-6) {
-      _offset.set(0.35, 0.25, 1);
-    }
-    _offset.setLength(snapDistance);
-
-    const candidates = this.#buildViewCandidates(_offset);
-    const canCheckOcclusion =
-      pointCloud && pointIndex != null && pointSizeMultiplier != null;
-
-    for (const offset of candidates) {
-      _forward.copy(_pointWorld).add(offset);
-      if (
-        canCheckOcclusion &&
-        pointCloud.isOccludedFrom(
-          pointIndex,
-          _forward,
-          _pointWorld,
-          pointSizeMultiplier
-        )
-      ) {
-        continue;
-      }
-
-      return {
-        position: _pointWorld.clone().add(offset),
-        target: _pointWorld.clone(),
-        roll: this.params.roll,
-        zoomDistance: snapDistance,
-        fov: this.camera.fov,
-      };
-    }
-
-    return {
-      position: _pointWorld.clone().add(candidates[0]),
-      target: _pointWorld.clone(),
-      roll: this.params.roll,
-      zoomDistance: snapDistance,
-      fov: this.camera.fov,
-    };
-  }
-
-  /** Candidate camera offsets ordered from current view to larger rotations. */
-  #buildViewCandidates(baseOffset) {
-    const distance = baseOffset.length();
-    const candidates = [baseOffset.clone()];
-
-    _up.set(0, 1, 0);
-    _right.crossVectors(baseOffset, _up);
-    if (_right.lengthSq() < 1e-10) {
-      _right.set(1, 0, 0);
-    } else {
-      _right.normalize();
-    }
-
-    const yawSteps = [15, -15, 30, -30, 45, -45, 60, -60, 90, -90];
-    for (const deg of yawSteps) {
-      candidates.push(
-        baseOffset
-          .clone()
-          .applyAxisAngle(_up, THREE.MathUtils.degToRad(deg))
-          .setLength(distance)
-      );
-    }
-
-    const pitchSteps = [20, -20, 35, -35, 50, -50];
-    for (const deg of pitchSteps) {
-      candidates.push(
-        baseOffset
-          .clone()
-          .applyAxisAngle(_right, THREE.MathUtils.degToRad(deg))
-          .setLength(distance)
-      );
-    }
-
-    return candidates;
+  /** Orient the camera toward the orbit target and apply roll. */
+  #syncCameraToTarget() {
+    this.controls.update();
+    this.applyRoll();
   }
 
   /** Zero out pending OrbitControls deltas (prevents drift after unfreezing). */

@@ -5,14 +5,12 @@
 import * as THREE from "three";
 import { PLYLoader } from "three/addons/loaders/PLYLoader.js";
 import { POINT_CLOUD, SELECTION } from "../constants.js";
+import { getAnimatedPointSize } from "./PointAnimation.js";
 
 // Module-level scratch vectors to avoid per-frame allocations
 const _pointWorld = new THREE.Vector3();
 const _projected = new THREE.Vector3();
 const _viewPos = new THREE.Vector3();
-const _rayDir = new THREE.Vector3();
-const _toPoint = new THREE.Vector3();
-const _closest = new THREE.Vector3();
 
 export class PointCloud {
   constructor(group) {
@@ -20,6 +18,7 @@ export class PointCloud {
     this.mesh = null;
     this.originalColors = null; // Snapshot of vertex colors for selection reset
     this.basePointSize = 0.12; // Recalculated after fit-to-object
+    this.pointSizeMultiplier = 1;
     this.ready = false;
   }
 
@@ -97,14 +96,34 @@ export class PointCloud {
   }
 
   applyPointSize(multiplier) {
+    this.pointSizeMultiplier = multiplier;
     if (!this.mesh) return;
-    const size = this.basePointSize * multiplier;
-    this.mesh.material.size = size;
+    this.mesh.material.size = this.basePointSize * multiplier;
   }
 
   applyOpacity(opacity) {
     if (!this.mesh) return;
     this.mesh.material.opacity = opacity;
+  }
+
+  updatePointAnimation(
+    elapsedSeconds,
+    { reduceMotion = false, disablePulse = false } = {}
+  ) {
+    if (!this.mesh) return false;
+
+    this.mesh.material.size = getAnimatedPointSize(
+      this.basePointSize,
+      this.pointSizeMultiplier,
+      elapsedSeconds,
+      {
+        amplitude: POINT_CLOUD.pulseAmplitude,
+        frequencyHz: POINT_CLOUD.pulseFrequencyHz,
+        enabled: !reduceMotion && !disablePulse,
+      }
+    );
+
+    return !reduceMotion && !disablePulse;
   }
 
   /** Return point index and local-space coordinates. */
@@ -167,52 +186,5 @@ export class PointCloud {
     raycaster.params.Points.threshold = threshold;
     raycaster.setFromCamera(pointer, camera);
     return raycaster.intersectObject(this.mesh);
-  }
-
-  /**
-   * True when another point sits between the eye and the selected point
-   * close enough to block the view along the sight line.
-   */
-  isOccludedFrom(index, eye, target, pointSizeMultiplier) {
-    const positions = this.geometry?.attributes.position;
-    if (!positions || !this.mesh) return false;
-
-    const pos = positions;
-    const sx = pos.getX(index);
-    const sy = pos.getY(index);
-    const sz = pos.getZ(index);
-    const searchRadiusSq =
-      SELECTION.occlusionSearchRadius * SELECTION.occlusionSearchRadius;
-    const occluderRadius =
-      this.basePointSize *
-      pointSizeMultiplier *
-      SELECTION.occlusionPointRadiusScale;
-
-    _rayDir.copy(target).sub(eye);
-    const rayLength = _rayDir.length();
-    if (rayLength < 1e-6) return false;
-    _rayDir.divideScalar(rayLength);
-
-    const matrixWorld = this.mesh.matrixWorld;
-    const count = pos.count;
-
-    for (let i = 0; i < count; i++) {
-      if (i === index) continue;
-
-      const dx = pos.getX(i) - sx;
-      const dy = pos.getY(i) - sy;
-      const dz = pos.getZ(i) - sz;
-      if (dx * dx + dy * dy + dz * dz > searchRadiusSq) continue;
-
-      _pointWorld.set(pos.getX(i), pos.getY(i), pos.getZ(i)).applyMatrix4(matrixWorld);
-      _toPoint.copy(_pointWorld).sub(eye);
-      const along = _toPoint.dot(_rayDir);
-      if (along <= occluderRadius || along >= rayLength - occluderRadius) continue;
-
-      _closest.copy(eye).addScaledVector(_rayDir, along);
-      if (_closest.distanceTo(_pointWorld) < occluderRadius) return true;
-    }
-
-    return false;
   }
 }

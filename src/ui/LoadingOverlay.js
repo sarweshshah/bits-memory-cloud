@@ -1,6 +1,5 @@
 /**
  * Full-screen loading overlay shown while the PLY point cloud is fetched.
- * Respects prefers-reduced-motion for all GSAP animations.
  */
 import gsap from "gsap";
 
@@ -11,53 +10,35 @@ export class LoadingOverlay {
     this.progressFill = progressFill;
     this.overlayTitle = overlayTitle;
     this.progressBar = progressBar;
-    this.reduceMotion = false; // Set by matchMedia in initAnimations
+    this.reduceMotion = false;
   }
 
-  /** Set up entrance animations and reduced-motion detection. */
+  /** Set up entrance animations for the loading overlay. */
   initAnimations() {
-    const media = gsap.matchMedia();
+    gsap.set(this.progressFill, {
+      scaleX: 0,
+      transformOrigin: "left center",
+    });
 
-    media.add(
-      { reduceMotion: "(prefers-reduced-motion: reduce)" },
-      (context) => {
-        this.reduceMotion = context.conditions.reduceMotion;
-
-        gsap.set(this.progressFill, {
-          scaleX: 0,
-          transformOrigin: "left center",
-        });
-
-        if (this.reduceMotion) {
-          gsap.set([this.overlayTitle, this.statusEl, this.progressBar], {
-            autoAlpha: 1,
-            y: 0,
-          });
-          return;
-        }
-
-        // Staggered fade-in of overlay elements
-        gsap.from(this.overlayTitle, {
-          autoAlpha: 0,
-          y: 14,
-          duration: 0.7,
-          delay: 0.1,
-        });
-        gsap.from(this.statusEl, {
-          autoAlpha: 0,
-          y: 10,
-          duration: 0.55,
-          delay: 0.22,
-        });
-        gsap.from(this.progressBar, {
-          autoAlpha: 0,
-          scaleX: 0.4,
-          duration: 0.5,
-          delay: 0.34,
-          transformOrigin: "center center",
-        });
-      }
-    );
+    gsap.from(this.overlayTitle, {
+      autoAlpha: 0,
+      y: 14,
+      duration: 0.7,
+      delay: 0.1,
+    });
+    gsap.from(this.statusEl, {
+      autoAlpha: 0,
+      y: 10,
+      duration: 0.55,
+      delay: 0.22,
+    });
+    gsap.from(this.progressBar, {
+      autoAlpha: 0,
+      scaleX: 0.4,
+      duration: 0.5,
+      delay: 0.34,
+      transformOrigin: "center center",
+    });
   }
 
   /** Update status text with a subtle pulse animation. */

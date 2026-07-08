@@ -3,12 +3,17 @@
  * Uses demand-driven rendering — only draws when something changes.
  */
 import * as THREE from "three";
-import { DEFAULT_SCENE } from "../constants.js";
+import {
+  DEFAULT_SCENE,
+  getCapturePixelRatio,
+  getDisplayPixelRatio,
+} from "../constants.js";
 
 export class SceneManager {
   constructor(canvas) {
     this.canvas = canvas;
     this.needsRender = true; // Flag consumed by App's animation loop
+    this.captureMode = false;
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x050508);
@@ -25,7 +30,7 @@ export class SceneManager {
       antialias: true,
       powerPreference: "high-performance",
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.#applyDisplayPixelRatio();
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = DEFAULT_SCENE.toneMappingExposure;
   }
@@ -33,6 +38,22 @@ export class SceneManager {
   /** Mark the next animation frame as needing a draw call. */
   requestRender() {
     this.needsRender = true;
+  }
+
+  /** Switch to full retina backing resolution for export. */
+  enterCaptureMode(camera) {
+    if (this.captureMode) return;
+    this.captureMode = true;
+    this.renderer.setPixelRatio(getCapturePixelRatio());
+    this.resize(camera);
+  }
+
+  /** Restore interactive viewport resolution after export. */
+  exitCaptureMode(camera) {
+    if (!this.captureMode) return;
+    this.captureMode = false;
+    this.#applyDisplayPixelRatio();
+    this.resize(camera);
   }
 
   setFog(enabled) {
@@ -48,6 +69,10 @@ export class SceneManager {
 
   /** Update camera aspect and renderer size on window resize. */
   resize(camera) {
+    if (!this.captureMode) {
+      this.#applyDisplayPixelRatio();
+    }
+
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -57,5 +82,9 @@ export class SceneManager {
   render(camera) {
     this.renderer.render(this.scene, camera);
     this.needsRender = false;
+  }
+
+  #applyDisplayPixelRatio() {
+    this.renderer.setPixelRatio(getDisplayPixelRatio());
   }
 }

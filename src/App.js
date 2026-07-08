@@ -6,10 +6,11 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import gsap from "gsap";
 
-import { POINT_CLOUD, CONTROLS, DEFAULT_CAMERA } from "./constants.js";
+import { POINT_CLOUD, CONTROLS, DEFAULT_CAMERA, RECORDING } from "./constants.js";
 import { LoadingOverlay } from "./ui/LoadingOverlay.js";
 import { Tooltip } from "./ui/Tooltip.js";
 import { GoToForm } from "./ui/GoToForm.js";
+import { AxisIndicator } from "./ui/AxisIndicator.js";
 import { SceneManager } from "./scene/SceneManager.js";
 import { CameraController } from "./scene/CameraController.js";
 import { HelpersManager } from "./scene/HelpersManager.js";
@@ -17,11 +18,15 @@ import { PointCloud } from "./pointcloud/PointCloud.js";
 import { PointSelection } from "./pointcloud/PointSelection.js";
 import { PointInteraction } from "./interaction/PointInteraction.js";
 import { ControlPanel } from "./controls/ControlPanel.js";
+import { VideoRecorder } from "./recording/VideoRecorder.js";
+import { CanvasSnapshot } from "./recording/CanvasSnapshot.js";
 import { getSelectedPoint } from "./navigation/PointUrl.js";
 
 gsap.defaults({ duration: 0.6, ease: "power2.out" });
 
 export class App {
+  #recordingDamping;
+
   constructor() {
     this.#initDom();
     this.#initParams();
@@ -52,6 +57,9 @@ export class App {
       input: document.getElementById("goto-id"),
       button: document.querySelector("#goto-form button"),
     });
+    this.axisIndicator = new AxisIndicator(
+      document.getElementById("axis-indicator")
+    );
     this.overlay.initAnimations();
   }
 
@@ -70,6 +78,8 @@ export class App {
       roll: DEFAULT_CAMERA.roll,
       yaw: DEFAULT_CAMERA.yaw,
       pitch: DEFAULT_CAMERA.pitch,
+      recordingFps: RECORDING.defaultFps,
+      recordingStatus: "Idle",
     };
   }
 
@@ -149,10 +159,94 @@ export class App {
         this.sceneManager.requestRender();
       },
       onCameraReset: () => this.cameraController.reset(),
+      onSnapshot: () => this.#takeSnapshot(),
+      onStartRecording: () => this.#startRecording(),
+      onPauseRecording: () => this.#pauseRecording(),
+      onStopRecording: () => this.#stopRecording(),
     });
 
     const guiControllers = this.controlPanel.setup();
     this.cameraController.setGuiControllers(guiControllers);
+
+    this.videoRecorder = new VideoRecorder({
+      canvas: this.canvas,
+      onStatusChange: (status) => this.controlPanel.setRecordingStatus(status),
+      onSessionEnd: () => this.#finishRecordingSession(),
+    });
+    this.canvasSnapshot = new CanvasSnapshot({ canvas: this.canvas });
+    this.controlPanel.updateRecordingState({
+      state: "idle",
+      supported: this.videoRecorder.supported,
+    });
+  }
+
+  async #startRecording() {
+    this.sceneManager.enterCaptureMode(this.camera);
+    this.#recordingDamping = this.controls.enableDamping;
+    this.controls.enableDamping = false;
+
+    await this.videoRecorder.start(this.params.recordingFps);
+    if (!this.videoRecorder.isActive) {
+      this.controls.enableDamping = this.#recordingDamping;
+      this.sceneManager.exitCaptureMode(this.camera);
+    }
+    this.controlPanel.updateRecordingState({
+      state: this.videoRecorder.state,
+      supported: this.videoRecorder.supported,
+    });
+    this.sceneManager.requestRender();
+  }
+
+  #pauseRecording() {
+    if (this.videoRecorder.state === "paused") {
+      this.videoRecorder.resume();
+    } else {
+      this.videoRecorder.pause();
+    }
+    this.controlPanel.updateRecordingState({
+      state: this.videoRecorder.state,
+      supported: this.videoRecorder.supported,
+    });
+    this.sceneManager.requestRender();
+  }
+
+  async #stopRecording() {
+    await this.videoRecorder.stop();
+  }
+
+  #finishRecordingSession() {
+    this.sceneManager.exitCaptureMode(this.camera);
+    if (this.#recordingDamping !== undefined) {
+      this.controls.enableDamping = this.#recordingDamping;
+    }
+    this.controlPanel.updateRecordingState({
+      state: "idle",
+      supported: this.videoRecorder.supported,
+    });
+    this.sceneManager.requestRender();
+  }
+
+  #takeSnapshot() {
+    if (!this.pointCloud.ready) return;
+
+    const alreadyCapturing = this.videoRecorder?.isActive;
+    if (!alreadyCapturing) {
+      this.sceneManager.enterCaptureMode(this.camera);
+    }
+
+    if (this.params.roll !== 0) {
+      this.cameraController.applyRoll();
+    }
+    if (this.interaction.isFocused && this.tooltip.isVisible) {
+      this.interaction.updateFocusedTooltip();
+    }
+
+    this.sceneManager.render(this.camera);
+    this.canvasSnapshot.capture();
+
+    if (!alreadyCapturing) {
+      this.sceneManager.exitCaptureMode(this.camera);
+    }
   }
 
   #bindEvents() {
@@ -211,33 +305,58 @@ export class App {
   }
 
   /** Load PLY, fit camera, enable UI, and restore deep-linked point if present. */
-  #loadPointCloud() {
+  async #loadPointCloud() {
+    try {
+      const head = await fetch(POINT_CLOUD.url, { method: "HEAD" });
+      if (!head.ok) {
+        throw new Error(
+          head.status === 404
+            ? "Point cloud file missing. Run npm run generate."
+            : `Point cloud unavailable (${head.status}).`
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      this.overlay.setStatus(
+        err.message?.includes("generate")
+          ? err.message
+          : "Failed to load point cloud."
+      );
+      return;
+    }
+
     this.pointCloud.load(POINT_CLOUD.url, {
       onProgress: (pct) => {
         this.overlay.setProgress(pct);
         this.overlay.setStatus(`Loading… ${(pct * 100).toFixed(0)}%`);
       },
       onLoaded: () => {
-        this.cameraController.fitToObject(
-          this.sceneManager.pointCloudGroup,
-          DEFAULT_CAMERA
-        );
-        this.#updateHelpers();
+        try {
+          this.cameraController.fitToObject(
+            this.sceneManager.pointCloudGroup,
+            DEFAULT_CAMERA
+          );
+          this.#updateHelpers();
 
-        // Scale base point size relative to cloud extent
-        this.pointCloud.basePointSize =
-          this.cameraController.boundingRadius * 0.0018;
-        this.#applyPointSize();
+          // Scale base point size relative to cloud extent
+          this.pointCloud.basePointSize =
+            this.cameraController.boundingRadius * 0.0018;
+          this.#applyPointSize();
 
-        this.controlPanel.updatePointCount(this.pointCloud.pointCount);
-        this.goToForm.enable(this.pointCloud.pointCount);
-        this.overlay.hide();
-        this.sceneManager.requestRender();
+          this.controlPanel.updatePointCount(this.pointCloud.pointCount);
+          this.controlPanel.setSnapshotEnabled(true);
+          this.goToForm.enable(this.pointCloud.pointCount);
+          this.overlay.hide();
+          this.sceneManager.requestRender();
 
-        // Deep link: ?point=N
-        const index = getSelectedPoint();
-        if (index !== null) {
-          this.interaction.goToPoint(index, { fromHistory: true });
+          // Deep link: ?point=N
+          const index = getSelectedPoint();
+          if (index !== null) {
+            this.interaction.goToPoint(index, { fromHistory: true });
+          }
+        } catch (err) {
+          console.error(err);
+          this.overlay.setStatus("Failed to initialize viewer.");
         }
       },
       onError: (err) => {
@@ -254,6 +373,10 @@ export class App {
   #animate() {
     requestAnimationFrame(() => this.#animate());
 
+    const now = performance.now();
+    const isCapturing = this.videoRecorder?.isCapturing;
+    const recordFrame = isCapturing && this.videoRecorder.needsFrame(now);
+
     const controlsActive =
       this.controls.enabled &&
       !this.cameraController.isAnimating &&
@@ -262,18 +385,36 @@ export class App {
       this.cameraController.applyRoll();
     }
 
+    const elapsedSeconds = recordFrame
+      ? this.videoRecorder.frameTimeSeconds
+      : now / 1000;
+    const pointsAnimated = this.pointCloud.updatePointAnimation(
+      elapsedSeconds,
+      {
+        reduceMotion: this.overlay.reduceMotion,
+        disablePulse: isCapturing,
+      }
+    );
+
     const shouldRender =
+      recordFrame ||
       this.sceneManager.needsRender ||
+      pointsAnimated ||
       controlsActive ||
       this.cameraController.isAnimating ||
       this.interaction.isFocused ||
-      this.selection.hasBlink;
+      this.selection.hasBlink ||
+      (this.videoRecorder?.state === "paused");
 
     if (shouldRender) {
       if (this.interaction.isFocused && this.tooltip.isVisible) {
         this.interaction.updateFocusedTooltip();
       }
       this.sceneManager.render(this.camera);
+      this.axisIndicator.update(this.camera);
+      if (recordFrame) {
+        this.videoRecorder.captureFrame();
+      }
     }
   }
 }

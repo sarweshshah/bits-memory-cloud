@@ -100,10 +100,9 @@ export class PointInteraction {
     this.goToForm.clearInvalid();
     this.goToForm.setValue(index);
     this.#enterSelection(index, { fromHistory });
-    this.cameraController.logSettings("Camera (go to point)");
   }
 
-  /** Reposition the focused tooltip after the camera has settled. */
+  /** Reposition the focused tooltip when the view changes. */
   updateFocusedTooltip() {
     if (!this.focusSession || !this.tooltip.isVisible) return;
     const { x, y } = this.pointCloud.projectToScreen(
@@ -169,7 +168,7 @@ export class PointInteraction {
   }
 
   /**
-   * Enter focus mode: save camera, highlight point, freeze orbit, animate in.
+   * Enter focus mode: save camera, highlight point, freeze orbit, show tooltip.
    * Updates URL unless navigating via history.
    */
   #enterSelection(index, { fromHistory = false } = {}) {
@@ -191,16 +190,7 @@ export class PointInteraction {
     this.canvas.style.cursor = "default";
 
     this.tooltip.hide();
-
-    const worldPos = this.pointCloud.getWorldPosition(index);
-    const snapState = this.cameraController.getSnapState(worldPos, {
-      pointCloud: this.pointCloud,
-      pointIndex: index,
-      pointSizeMultiplier: this.params.pointSize,
-    });
-    this.cameraController.animateTo(snapState, () => {
-      this.#showFocusedTooltip(index);
-    });
+    this.#showFocusedTooltip(index);
   }
 
   #hideHoverTooltip() {

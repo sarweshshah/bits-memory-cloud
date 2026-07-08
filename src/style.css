@@ -99,8 +99,22 @@ body {
 }
 
 #point-tooltip .tooltip-coords {
+  display: flex;
+  gap: 0.65rem;
   opacity: 0.85;
   font-variant-numeric: tabular-nums;
+}
+
+#point-tooltip .axis-x {
+  color: #ff4466;
+}
+
+#point-tooltip .axis-y {
+  color: #88ff44;
+}
+
+#point-tooltip .axis-z {
+  color: #4488ff;
 }
 
 #point-tooltip .tooltip-dismiss {
@@ -183,4 +197,120 @@ body {
 #goto-form input:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+#axis-indicator {
+  position: fixed;
+  right: 0.85rem;
+  bottom: 0.85rem;
+  z-index: 12;
+  pointer-events: none;
+  opacity: 1;
+}
+
+#axis-indicator svg {
+  display: block;
+}
+
+#axis-indicator .axis-indicator__bg {
+  fill: rgba(10, 10, 18, 0.55);
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 0.75;
+}
+
+#axis-indicator .axis-indicator__line {
+  stroke-width: 1.25;
+  stroke-linecap: round;
+}
+
+#axis-indicator .axis-x {
+  stroke: #ff4466;
+}
+
+#axis-indicator .axis-y {
+  stroke: #88ff44;
+}
+
+#axis-indicator .axis-z {
+  stroke: #4488ff;
+}
+
+#axis-indicator .axis-indicator__label {
+  font-size: 7px;
+  font-weight: 600;
+  font-family: system-ui, -apple-system, sans-serif;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  user-select: none;
+}
+
+#axis-indicator .axis-indicator__label.axis-x {
+  fill: #ff4466;
+}
+
+#axis-indicator .axis-indicator__label.axis-y {
+  fill: #88ff44;
+}
+
+#axis-indicator .axis-indicator__label.axis-z {
+  fill: #4488ff;
+}
+
+.recording-controls-row {
+  border: none !important;
+}
+
+.recording-controls-row .recording-controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.35rem 0 0.15rem;
+}
+
+.recording-controls__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(232, 232, 236, 0.82);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.recording-controls__btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.recording-controls__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.recording-controls__btn--record .recording-dot {
+  fill: #ff4466;
+}
+
+.recording-controls__btn--record:not(:disabled):hover .recording-dot {
+  fill: #ff6680;
+}
+
+.recording-controls__btn--record:disabled .recording-dot {
+  fill: rgba(255, 68, 102, 0.45);
+}
+
+.recording-controls__btn--record.recording-controls__btn--active {
+  border-color: rgba(255, 68, 102, 0.45);
+  background: rgba(255, 68, 102, 0.12);
+}
+
+.recording-controls__btn--record:not(:disabled):hover {
+  border-color: rgba(255, 68, 102, 0.55);
 }

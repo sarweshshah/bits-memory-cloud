@@ -26,6 +26,17 @@
       />
       <button type="submit" disabled>Go</button>
     </form>
+    <div id="axis-indicator" aria-hidden="true">
+      <svg viewBox="0 0 48 48" width="48" height="48">
+        <circle class="axis-indicator__bg" cx="24" cy="24" r="20" />
+        <line class="axis-indicator__line axis-x" x1="24" y1="24" x2="24" y2="24" />
+        <line class="axis-indicator__line axis-y" x1="24" y1="24" x2="24" y2="24" />
+        <line class="axis-indicator__line axis-z" x1="24" y1="24" x2="24" y2="24" />
+        <text class="axis-indicator__label axis-x" x="24" y="24">X</text>
+        <text class="axis-indicator__label axis-y" x="24" y="24">Y</text>
+        <text class="axis-indicator__label axis-z" x="24" y="24">Z</text>
+      </svg>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
