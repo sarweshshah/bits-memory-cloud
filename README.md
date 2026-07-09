@@ -5,17 +5,20 @@ Interactive 3D point cloud viewer built with [Three.js](https://threejs.org/), [
 ## Features
 
 ### Pipeline
+
 - Convert textured OBJ/MTL meshes to colored PLY point clouds
 - Web-optimized subsampled output for faster loading
 - Loading progress UI for large point cloud files
 
 ### Viewer
+
 - Orbit controls with adjustable point size, opacity, fog, and roll
 - ACES filmic tone mapping for richer color
 - Debug helpers (axes, grid, bounding box)
 - Camera panel: distance, yaw, pitch, roll, and reset view
 
 ### Point interaction
+
 - Hover a point to see its ID and world coordinates in a tooltip
 - Click to enter focus mode — dims the cloud and highlights the point
 - **Go to Point ID** form to jump directly to a point by index
@@ -88,12 +91,11 @@ bits-memory-cloud/
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start Vite dev server |
+| Command            | Description                             |
+| ------------------ | --------------------------------------- |
+| `npm run dev`      | Start Vite dev server                   |
 | `npm run generate` | Run Python script to build point clouds |
-| `npm run build` | Alias for `generate` |
-| `npm run preview` | Preview production build |
+| `npm run build`    | Alias for `generate`                    |
 
 ## Point cloud generation
 
@@ -105,26 +107,28 @@ The Python script samples points on triangle surfaces and reads color from diffu
 
 Common options:
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--obj` | `assets/mesh.obj` | Input OBJ file |
-| `--mtl` | `assets/mesh.mtl` | Material file |
-| `--out` | `assets/cloud.ply` | Full-resolution output |
-| `--web-out` | `assets/cloud_web.ply` | Subsampled web output |
-| `--web-step` | `4` | Keep every Nth point for web PLY |
-| `--samples-per-face` | `10` | Points sampled per triangle |
+| Flag                 | Default                | Description                      |
+| -------------------- | ---------------------- | -------------------------------- |
+| `--obj`              | `assets/mesh.obj`      | Input OBJ file                   |
+| `--mtl`              | `assets/mesh.mtl`      | Material file                    |
+| `--out`              | `assets/cloud.ply`     | Full-resolution output           |
+| `--web-out`          | `assets/cloud_web.ply` | Subsampled web output            |
+| `--web-step`         | `4`                    | Keep every Nth point for web PLY |
+| `--samples-per-face` | `10`                   | Points sampled per triangle      |
 
 Place your mesh (`mesh.obj`, `mesh.mtl`) and texture images in `assets/`, then run `npm run generate`.
 
 ## Viewer controls
 
 ### Navigation
+
 - **Drag** — orbit
 - **Scroll** — zoom
 - **Right-drag** — pan
 - **GUI panel** — point size, opacity, auto-rotate, fog, debug helpers, camera settings
 
 ### Point selection
+
 - **Hover** — show point ID and coordinates
 - **Click** — focus on a point (cloud dims, highlight blinks)
 - **Escape** or tooltip **×** — dismiss focus
@@ -135,14 +139,14 @@ Place your mesh (`mesh.obj`, `mesh.mtl`) and texture images in `assets/`, then r
 
 Defaults live in `src/constants.js`:
 
-| Group | Key settings |
-|-------|--------------|
-| `POINT_CLOUD` | PLY URL, color brightness |
+| Group            | Key settings                                |
+| ---------------- | ------------------------------------------- |
+| `POINT_CLOUD`    | PLY URL, color brightness                   |
 | `DEFAULT_CAMERA` | FOV, position, zoom distance, snap distance |
-| `DEFAULT_SCENE` | Background presets, tone mapping exposure |
-| `SELECTION` | Dim factor, highlight size, accent color |
-| `CONTROLS` | Auto-rotate speed |
-| `INTERACTION` | Click-vs-drag threshold |
+| `DEFAULT_SCENE`  | Background presets, tone mapping exposure   |
+| `SELECTION`      | Dim factor, highlight size, accent color    |
+| `CONTROLS`       | Auto-rotate speed                           |
+| `INTERACTION`    | Click-vs-drag threshold                     |
 
 ## License
 

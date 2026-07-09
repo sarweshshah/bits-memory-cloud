@@ -9,8 +9,7 @@
   "scripts": {
     "dev": "vite",
     "generate": ".venv/bin/python mesh_to_pointcloud.py",
-    "build": "npm run generate && vite build",
-    "preview": "vite preview"
+    "build": "npm run generate && vite build"
   },
   "dependencies": {
     "gsap": "^3.15.0",
