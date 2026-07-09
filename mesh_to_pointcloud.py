@@ -5,15 +5,16 @@ Samples points on triangle surfaces and reads color from diffuse textures.
 """
 
 import argparse
-import struct
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
 
+SUPPORTED_EXTENSIONS = {".obj"}
+
 
 def parse_mtl(mtl_path):
-    """Return dict: material_name -> texture_path"""
+    """Return dict: material_name -> {texture, kd}"""
     mats = {}
     current = None
     with open(mtl_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -21,22 +22,41 @@ def parse_mtl(mtl_path):
             line = line.strip()
             if line.startswith("newmtl "):
                 current = line.split(None, 1)[1]
-                mats[current] = None
-            elif line.startswith("map_Kd ") and current:
-                mats[current] = line.split(None, 1)[1].strip()
+                mats[current] = {"texture": None, "kd": np.array([200, 200, 200], dtype=np.uint8)}
+            elif current and line.startswith("map_Kd "):
+                mats[current]["texture"] = line.split(None, 1)[1].strip()
+            elif current and line.startswith("Kd "):
+                parts = line.split()
+                mats[current]["kd"] = np.array(
+                    [int(float(parts[1]) * 255), int(float(parts[2]) * 255), int(float(parts[3]) * 255)],
+                    dtype=np.uint8,
+                )
     return mats
 
 
-def load_textures(mtl_path, base_dir):
+def parse_mtllib(obj_path):
+    """Return the first mtllib path referenced by an OBJ file, if any."""
+    with open(obj_path, "r", encoding="utf-8", errors="ignore") as f:
+        for raw in f:
+            line = raw.strip()
+            if line.startswith("mtllib "):
+                return line.split(None, 1)[1].strip()
+    return None
+
+
+def load_materials(mtl_path, base_dir):
     mats = parse_mtl(mtl_path)
     textures = {}
-    for name, tex_rel in mats.items():
+    fallback_colors = {}
+    for name, props in mats.items():
+        fallback_colors[name] = props["kd"]
+        tex_rel = props["texture"]
         if not tex_rel:
             continue
         tex_path = Path(base_dir) / tex_rel
         img = Image.open(tex_path).convert("RGB")
         textures[name] = np.asarray(img, dtype=np.uint8)
-    return textures
+    return textures, fallback_colors
 
 
 def parse_obj(obj_path):
@@ -191,34 +211,114 @@ def resolve_path(path_str, root):
     return path if path.is_absolute() else root / path
 
 
+def resolve_mesh_path(args, root):
+    mesh_arg = args.input or args.obj
+    if mesh_arg is None:
+        mesh_arg = root / "assets" / "mesh.obj"
+    mesh_path = resolve_path(mesh_arg, root)
+    if not mesh_path.is_file():
+        raise FileNotFoundError(f"Mesh file not found: {mesh_path}")
+    if mesh_path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+        supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
+        raise ValueError(
+            f"Unsupported mesh format '{mesh_path.suffix}'. Supported formats: {supported}"
+        )
+    return mesh_path
+
+
+def resolve_mtl_path(mesh_path, mtl_arg, root):
+    if mtl_arg:
+        mtl_path = resolve_path(mtl_arg, root)
+        if not mtl_path.is_file():
+            raise FileNotFoundError(f"Material file not found: {mtl_path}")
+        return mtl_path
+
+    mtllib = parse_mtllib(mesh_path)
+    if not mtllib:
+        raise FileNotFoundError(
+            f"No mtllib reference found in {mesh_path}. Pass --mtl explicitly."
+        )
+
+    mtl_path = mesh_path.parent / mtllib
+    if not mtl_path.is_file():
+        raise FileNotFoundError(
+            f"Referenced material file not found: {mtl_path}. Pass --mtl explicitly."
+        )
+    return mtl_path
+
+
+def default_output_path(mesh_path, suffix):
+    default_mesh = (Path(__file__).parent / "assets" / "mesh.obj").resolve()
+    if mesh_path.resolve() == default_mesh:
+        name = "cloud_web" if suffix == "_web" else "cloud"
+        return mesh_path.parent / f"{name}.ply"
+    return mesh_path.with_name(f"{mesh_path.stem}{suffix}.ply")
+
+
 def main():
     root = Path(__file__).parent
-    assets = root / "assets"
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--obj", default=str(assets / "mesh.obj"))
-    parser.add_argument("--mtl", default=str(assets / "mesh.mtl"))
-    parser.add_argument("--out", default=str(assets / "cloud.ply"))
-    parser.add_argument("--samples-per-face", type=int, default=10,
-                        help="Points per triangle (10 => ~8.9M points)")
+    parser = argparse.ArgumentParser(
+        description="Convert a textured OBJ mesh to a dense colored PLY point cloud."
+    )
+    parser.add_argument(
+        "input",
+        nargs="?",
+        help="Input mesh file path (.obj). Defaults to assets/mesh.obj when omitted.",
+    )
+    parser.add_argument(
+        "--input", "-i",
+        dest="input_flag",
+        help="Input mesh file path (.obj). Alternative to the positional argument.",
+    )
+    parser.add_argument(
+        "--obj",
+        help="Deprecated alias for --input. Kept for backward compatibility.",
+    )
+    parser.add_argument(
+        "--mtl",
+        help="Material file path. Defaults to the mtllib referenced by the OBJ.",
+    )
+    parser.add_argument(
+        "--out",
+        help="Full-resolution PLY output path. Defaults to <mesh-stem>.ply beside the input mesh.",
+    )
+    parser.add_argument(
+        "--samples-per-face", type=int, default=10,
+        help="Points per triangle (10 => ~8.9M points for large meshes)",
+    )
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--web-out", default=str(assets / "cloud_web.ply"),
-                        help="Optional subsampled PLY for web viewing")
-    parser.add_argument("--web-step", type=int, default=4,
-                        help="Keep every Nth point for web PLY (default: 4)")
+    parser.add_argument(
+        "--web-out",
+        help="Subsampled PLY for web viewing. Defaults to <mesh-stem>_web.ply beside the input mesh.",
+    )
+    parser.add_argument(
+        "--no-web",
+        action="store_true",
+        help="Skip writing the subsampled web PLY.",
+    )
+    parser.add_argument(
+        "--web-step", type=int, default=4,
+        help="Keep every Nth point for web PLY (default: 4)",
+    )
     args = parser.parse_args()
 
-    obj_path = resolve_path(args.obj, root)
-    mtl_path = resolve_path(args.mtl, root)
-    out_path = resolve_path(args.out, root)
-    base = obj_path.parent
+    args.input = args.input_flag or args.input or args.obj
+    mesh_path = resolve_mesh_path(args, root)
+    mtl_path = resolve_mtl_path(mesh_path, args.mtl, root)
+    out_path = resolve_path(args.out, root) if args.out else default_output_path(mesh_path, "")
+    base = mesh_path.parent
 
-    print("Loading textures...")
-    textures = load_textures(mtl_path, base)
-    print(f"  {len(textures)} textures loaded")
+    print(f"Input mesh: {mesh_path}")
+    print(f"Material file: {mtl_path}")
+    print(f"Output PLY: {out_path}")
+
+    print("Loading materials...")
+    textures, fallback_colors = load_materials(mtl_path, base)
+    print(f"  {len(textures)} textures loaded, {len(fallback_colors)} materials parsed")
 
     print("Parsing OBJ...")
-    verts, uvs, faces = parse_obj(obj_path)
+    verts, uvs, faces = parse_obj(mesh_path)
     print(f"  {len(verts)} vertices, {len(uvs)} UVs, {len(faces)} faces")
 
     rng = np.random.default_rng(args.seed)
@@ -237,16 +337,22 @@ def main():
     print(f"Sampling {n_per} points/face...")
     for mat, mat_faces in by_mat.items():
         tex = textures.get(mat)
+        fallback = fallback_colors.get(mat, np.array([200, 200, 200], dtype=np.uint8))
         if tex is None:
-            print(f"  Warning: no texture for material '{mat}', skipping {len(mat_faces)} faces")
-            continue
+            print(
+                f"  Material '{mat}' has no texture; using diffuse color "
+                f"RGB({fallback[0]}, {fallback[1]}, {fallback[2]})"
+            )
 
         for face in mat_faces:
             i0, i1, i2, uv0, uv1, uv2, _ = face
             pts, tuv = sample_triangle_batch(
                 verts, uvs, i0, i1, i2, uv0, uv1, uv2, n_per, rng
             )
-            cols = sample_texture_batch(tex, tuv[:, 0], tuv[:, 1])
+            if tex is None:
+                cols = np.tile(fallback, (n_per, 1))
+            else:
+                cols = sample_texture_batch(tex, tuv[:, 0], tuv[:, 1])
             all_pts.append(pts)
             all_cols.append(cols)
 
@@ -254,18 +360,23 @@ def main():
             if processed % 100000 == 0:
                 print(f"  {processed}/{len(faces)} faces")
 
+    if not all_pts:
+        raise RuntimeError("No points were sampled. Check mesh faces and material assignments.")
+
     points = np.vstack(all_pts)
     colors = np.vstack(all_cols)
 
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     print(f"Writing {len(points):,} points -> {out_path}")
     write_ply_binary(out_path, points, colors)
     size_mb = out_path.stat().st_size / (1024 * 1024)
     print(f"Done. Output size: {size_mb:.1f} MB")
 
-    if args.web_out:
-        web_path = resolve_path(args.web_out, root)
+    if not args.no_web:
+        web_path = resolve_path(args.web_out, root) if args.web_out else default_output_path(mesh_path, "_web")
         if args.web_step < 1:
             raise ValueError("--web-step must be >= 1")
+        web_path.parent.mkdir(parents=True, exist_ok=True)
         write_web_ply(out_path, web_path, args.web_step)
 
 
