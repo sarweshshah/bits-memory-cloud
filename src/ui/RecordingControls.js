@@ -19,12 +19,16 @@ export class RecordingControls {
     this.state = "idle";
 
     container.classList.add("recording-controls-row");
+    // Match lil-gui's .name / .widget columns so buttons align with other inputs
     container.innerHTML = `
-      <div class="recording-controls" role="toolbar" aria-label="Recording controls">
-        <button type="button" class="recording-controls__btn recording-controls__btn--snapshot" aria-label="Snapshot"></button>
-        <button type="button" class="recording-controls__btn recording-controls__btn--record" aria-label="Record"></button>
-        <button type="button" class="recording-controls__btn recording-controls__btn--pause" aria-label="Pause"></button>
-        <button type="button" class="recording-controls__btn recording-controls__btn--stop" aria-label="Stop"></button>
+      <div class="name"></div>
+      <div class="widget">
+        <div class="recording-controls" role="toolbar" aria-label="Recording controls">
+          <button type="button" class="recording-controls__btn recording-controls__btn--snapshot" aria-label="Snapshot"></button>
+          <button type="button" class="recording-controls__btn recording-controls__btn--record" aria-label="Record"></button>
+          <button type="button" class="recording-controls__btn recording-controls__btn--pause" aria-label="Pause"></button>
+          <button type="button" class="recording-controls__btn recording-controls__btn--stop" aria-label="Stop"></button>
+        </div>
       </div>
     `;
 

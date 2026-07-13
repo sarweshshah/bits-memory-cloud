@@ -21,6 +21,7 @@ export class ControlPanel {
     this.recordingSupported = false;
     this.snapshotEnabled = false;
     this.pointCountController = null;
+    this.viewSizeController = null;
     this.recordingStatusController = null;
     this.hoverEnabledController = null;
     this.showTooltipCoordsController = null;
@@ -83,7 +84,7 @@ export class ControlPanel {
       });
     this.showTooltipCoordsController = tooltipFolder
       .add(this.params, "showTooltipCoords")
-      .name("Coordinates")
+      .name("Show Coordinates")
       .onChange(() => this.callbacks.onShowTooltipCoordsChange());
     this.#syncCoordinatesController();
 
@@ -123,10 +124,14 @@ export class ControlPanel {
     this.#mountRecordingControls(recordingFolder);
     recordingFolder.close();
 
-    // Read-only display of loaded point count
+    // Read-only display of loaded point count and viewport size
     this.pointCountController = this.gui
       .add(this.params, "pointCount")
       .name("Points")
+      .disable();
+    this.viewSizeController = this.gui
+      .add(this.params, "viewSize")
+      .name("View size")
       .disable();
     this.gui.close();
 
@@ -156,6 +161,12 @@ export class ControlPanel {
   updatePointCount(count) {
     this.params.pointCount = count.toLocaleString();
     this.pointCountController?.updateDisplay();
+  }
+
+  /** Refresh the viewport size label (W x H) in the GUI. */
+  updateViewSize(width, height) {
+    this.params.viewSize = `${width} x ${height}`;
+    this.viewSizeController?.updateDisplay();
   }
 
   /** Lock tooltip options while a hover/focused tooltip is visible. */

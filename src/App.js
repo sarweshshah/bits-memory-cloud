@@ -86,9 +86,10 @@ export class App {
       showAxes: false,
       showGrid: false,
       showBbox: false,
-      hoverEnabled: true,
+      hoverEnabled: false,
       showTooltipCoords: true,
       pointCount: "—",
+      viewSize: "—",
       zoomDistance: DEFAULT_CAMERA.zoomDistance,
       roll: DEFAULT_CAMERA.roll,
       yaw: DEFAULT_CAMERA.yaw,
@@ -340,6 +341,10 @@ export class App {
     const rect = this.canvas.getBoundingClientRect();
     this.pointCloud.setViewportRect(rect);
     this.interaction.setViewportRect(rect);
+    this.controlPanel.updateViewSize(
+      Math.round(rect.width),
+      Math.round(rect.height),
+    );
   }
 
   /** Load PLY, fit camera, enable UI, and restore deep-linked point if present. */
