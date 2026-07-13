@@ -218,7 +218,7 @@ export class PointInteraction {
    * for each is wasteful — keep the latest event and process it once.
    */
   #onPointerMove(event) {
-    if (!this.pointCloud.ready || this.focusSession) return;
+    if (!this.pointCloud.ready || this.focusSession || !this.params.hoverEnabled) return;
 
     this.pendingPointerEvent = event;
     if (this.hoverRafId) return;
@@ -287,6 +287,8 @@ export class PointInteraction {
       this.dismissFocus();
       return;
     }
+
+    if (!this.params.hoverEnabled) return;
 
     this.#updatePointerFromEvent(event);
     const hits = this.#raycast();

@@ -10,6 +10,35 @@ export const POINT_CLOUD = {
   colorBrightness: 1.5, // Multiplier applied to vertex colors in the material
 };
 
+/** Ambient amber ember overlay (does not recolor the loaded model). */
+export const AMBER_PARTICLES = {
+  count: 4500,
+  color: { r: 0.78, g: 0.48, b: 0.22 }, // Soft amber
+  colorVariance: 0.14,
+  opacity: 0.6,
+  size: 0.3, // Overridden after fit relative to bounding radius
+  sizeFactor: 0.0042, // Fraction of bounding radius
+  boundsPadding: 0.06, // Extra volume around the cloud bbox
+  /** Bias spawn toward upper air so embers aren't buried in dense ground points. */
+  heightBias: 0.35,
+  /**
+   * Light breeze field — amber overlay only; the point cloud is unaffected.
+   * Strengths are world units / second relative to cloud half-extent.
+   */
+  breeze: {
+    baseStrength: 0.035, // Steady light air (× max horizontal half-extent)
+    gustStrength: 0.028, // Soft gust peaks on top of base
+    gustFrequency: 0.11, // How often gusts swell (Hz-ish)
+    turnSpeed: 0.08, // How quickly wind heading wanders
+    verticalMix: 0.12, // Fraction of wind that lifts / settles
+    drag: 1.35, // Air resistance — higher = particles follow wind more tightly
+    flutter: 0.018, // Tiny per-particle turbulence (× half-extent)
+    buoyancy: 0.012, // Soft upward float (× vertical span / sec)
+    massMin: 0.55, // Lighter particles respond faster
+    massMax: 1.35,
+  },
+};
+
 /** OrbitControls behavior. */
 export const CONTROLS = {
   autoRotateSpeed: 0.35,
@@ -95,9 +124,11 @@ export function getCapturePixelRatio() {
 
 /** Scale video bitrate with resolution and frame rate for sharper output. */
 export function computeRecordingBitrate(width, height, fps) {
-  const estimate = Math.round(width * height * fps * RECORDING.bitsPerPixelFrame);
+  const estimate = Math.round(
+    width * height * fps * RECORDING.bitsPerPixelFrame,
+  );
   return Math.min(
     RECORDING.maxVideoBitsPerSecond,
-    Math.max(RECORDING.minVideoBitsPerSecond, estimate)
+    Math.max(RECORDING.minVideoBitsPerSecond, estimate),
   );
 }

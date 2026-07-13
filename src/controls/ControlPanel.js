@@ -22,6 +22,7 @@ export class ControlPanel {
     this.snapshotEnabled = false;
     this.pointCountController = null;
     this.recordingStatusController = null;
+    this.hoverEnabledController = null;
     this.showTooltipCoordsController = null;
   }
 
@@ -50,6 +51,11 @@ export class ControlPanel {
       .name("Fog")
       .onChange((v) => this.callbacks.onFogChange(v));
 
+    this.gui
+      .add(this.params, "showAmberParticles")
+      .name("Amber particles")
+      .onChange(() => this.callbacks.onAmberParticlesChange());
+
     // --- Scene helpers (axes, grid, bounding box) ---
     const helpersFolder = this.gui.addFolder("Helpers");
     helpersFolder
@@ -67,6 +73,10 @@ export class ControlPanel {
 
     // --- Tooltip content options (disabled while a tooltip is open) ---
     const tooltipFolder = this.gui.addFolder("Tooltip");
+    this.hoverEnabledController = tooltipFolder
+      .add(this.params, "hoverEnabled")
+      .name("Hover")
+      .onChange((v) => this.callbacks.onHoverEnabledChange(v));
     this.showTooltipCoordsController = tooltipFolder
       .add(this.params, "showTooltipCoords")
       .name("Coordinates")
@@ -145,6 +155,7 @@ export class ControlPanel {
 
   /** Lock tooltip data options while a hover/focused tooltip is visible. */
   setTooltipOptionsEnabled(enabled) {
+    this.hoverEnabledController?.disable(!enabled);
     this.showTooltipCoordsController?.disable(!enabled);
   }
 

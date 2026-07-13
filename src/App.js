@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import gsap from "gsap";
 
-import { POINT_CLOUD, CONTROLS, DEFAULT_CAMERA, RECORDING } from "./constants.js";
+import { POINT_CLOUD, CONTROLS, DEFAULT_CAMERA, RECORDING, AMBER_PARTICLES } from "./constants.js";
 import { LoadingOverlay } from "./ui/LoadingOverlay.js";
 import { Tooltip } from "./ui/Tooltip.js";
 import { GoToForm } from "./ui/GoToForm.js";
@@ -16,6 +16,7 @@ import { CameraController } from "./scene/CameraController.js";
 import { HelpersManager } from "./scene/HelpersManager.js";
 import { PointCloud } from "./pointcloud/PointCloud.js";
 import { PointSelection } from "./pointcloud/PointSelection.js";
+import { AmberParticles } from "./pointcloud/AmberParticles.js";
 import { PointInteraction } from "./interaction/PointInteraction.js";
 import { ControlPanel } from "./controls/ControlPanel.js";
 import { VideoRecorder } from "./recording/VideoRecorder.js";
@@ -26,6 +27,7 @@ gsap.defaults({ duration: 0.6, ease: "power2.out" });
 
 export class App {
   #recordingDamping;
+  #lastFrameTime;
 
   constructor() {
     this.#initDom();
@@ -74,9 +76,11 @@ export class App {
       opacity: 1,
       autoRotate: true,
       fog: false,
+      showAmberParticles: true,
       showAxes: false,
       showGrid: false,
       showBbox: false,
+      hoverEnabled: true,
       showTooltipCoords: true,
       pointCount: "—",
       zoomDistance: DEFAULT_CAMERA.zoomDistance,
@@ -119,6 +123,7 @@ export class App {
 
   #initPointCloud() {
     this.pointCloud = new PointCloud(this.sceneManager.pointCloudGroup);
+    this.amberParticles = new AmberParticles(this.sceneManager.pointCloudGroup);
     this.selection = new PointSelection(
       this.pointCloud,
       this.sceneManager.pointCloudGroup,
@@ -155,7 +160,11 @@ export class App {
         this.sceneManager.requestRender();
       },
       onFogChange: (v) => this.sceneManager.setFog(v),
+      onAmberParticlesChange: () => this.#applyAmberParticles(),
       onHelpersChange: () => this.#updateHelpers(),
+      onHoverEnabledChange: (v) => {
+        if (!v) this.interaction.dismissFocus();
+      },
       onShowTooltipCoordsChange: () => {
         this.tooltip.setShowCoordinates(this.params.showTooltipCoords);
       },
@@ -298,6 +307,17 @@ export class App {
     this.sceneManager.requestRender();
   }
 
+  #applyAmberParticles() {
+    this.#syncAmberParticlesEnabled();
+    this.sceneManager.requestRender();
+  }
+
+  #syncAmberParticlesEnabled() {
+    const visible =
+      this.params.showAmberParticles && !this.overlay.reduceMotion;
+    this.amberParticles?.setEnabled(visible);
+  }
+
   #updateHelpers() {
     this.helpers.update({
       showAxes: this.params.showAxes,
@@ -355,6 +375,16 @@ export class App {
             this.cameraController.boundingRadius * 0.0018;
           this.#applyPointSize();
 
+          // Amber ember overlay — drifts through the volume; model colors unchanged
+          const box = new THREE.Box3().setFromObject(
+            this.sceneManager.pointCloudGroup
+          );
+          this.amberParticles.build(box);
+          this.amberParticles.setPointSize(
+            this.cameraController.boundingRadius * AMBER_PARTICLES.sizeFactor
+          );
+          this.#applyAmberParticles();
+
           this.controlPanel.updatePointCount(this.pointCloud.pointCount);
           this.controlPanel.setSnapshotEnabled(true);
           this.goToForm.enable(this.pointCloud.pointCount);
@@ -380,7 +410,8 @@ export class App {
 
   /**
    * Demand-driven render loop.
-   * Only draws when controls move, camera animates, selection blinks, or focus is active.
+   * Only draws when controls move, camera animates, selection blinks, focus is
+   * active, or amber particles are drifting.
    */
   #animate() {
     requestAnimationFrame(() => this.#animate());
@@ -388,6 +419,16 @@ export class App {
     const now = performance.now();
     const isCapturing = this.videoRecorder?.isCapturing;
     const recordFrame = isCapturing && this.videoRecorder.needsFrame(now);
+
+    const dt = this.#lastFrameTime ? Math.min(0.05, (now - this.#lastFrameTime) * 0.001) : 0.016;
+    this.#lastFrameTime = now;
+
+    if (this.amberParticles) {
+      this.#syncAmberParticlesEnabled();
+      if (this.amberParticles.isActive) {
+        this.amberParticles.update(dt);
+      }
+    }
 
     const controlsActive =
       this.controls.enabled &&
@@ -404,6 +445,7 @@ export class App {
       this.cameraController.isAnimating ||
       this.interaction.isFocused ||
       this.selection.hasBlink ||
+      this.amberParticles?.isActive ||
       (this.videoRecorder?.state === "paused");
 
     if (shouldRender) {
