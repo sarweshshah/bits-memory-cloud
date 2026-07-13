@@ -6,7 +6,13 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import gsap from "gsap";
 
-import { POINT_CLOUD, CONTROLS, DEFAULT_CAMERA, RECORDING, AMBER_PARTICLES } from "./constants.js";
+import {
+  POINT_CLOUD,
+  CONTROLS,
+  DEFAULT_CAMERA,
+  RECORDING,
+  AMBER_PARTICLES,
+} from "./constants.js";
 import { LoadingOverlay } from "./ui/LoadingOverlay.js";
 import { Tooltip } from "./ui/Tooltip.js";
 import { GoToForm } from "./ui/GoToForm.js";
@@ -64,7 +70,7 @@ export class App {
       button: document.querySelector("#goto-form button"),
     });
     this.axisIndicator = new AxisIndicator(
-      document.getElementById("axis-indicator")
+      document.getElementById("axis-indicator"),
     );
     this.overlay.initAnimations();
   }
@@ -116,7 +122,7 @@ export class App {
       {
         getReduceMotion: () => this.overlay.reduceMotion,
         onRenderRequest: () => this.sceneManager.requestRender(),
-      }
+      },
     );
     this.cameraController.setGsap(gsap);
   }
@@ -130,7 +136,7 @@ export class App {
       {
         onRenderRequest: () => this.sceneManager.requestRender(),
         getReduceMotion: () => this.overlay.reduceMotion,
-      }
+      },
     );
   }
 
@@ -344,7 +350,7 @@ export class App {
         throw new Error(
           head.status === 404
             ? "Point cloud file missing. Run npm run generate."
-            : `Point cloud unavailable (${head.status}).`
+            : `Point cloud unavailable (${head.status}).`,
         );
       }
     } catch (err) {
@@ -352,7 +358,7 @@ export class App {
       this.overlay.setStatus(
         err.message?.includes("generate")
           ? err.message
-          : "Failed to load point cloud."
+          : "Failed to load point cloud.",
       );
       return;
     }
@@ -366,7 +372,7 @@ export class App {
         try {
           this.cameraController.fitToObject(
             this.sceneManager.pointCloudGroup,
-            DEFAULT_CAMERA
+            DEFAULT_CAMERA,
           );
           this.#updateHelpers();
 
@@ -377,11 +383,11 @@ export class App {
 
           // Amber ember overlay — drifts through the volume; model colors unchanged
           const box = new THREE.Box3().setFromObject(
-            this.sceneManager.pointCloudGroup
+            this.sceneManager.pointCloudGroup,
           );
           this.amberParticles.build(box);
           this.amberParticles.setPointSize(
-            this.cameraController.boundingRadius * AMBER_PARTICLES.sizeFactor
+            this.cameraController.boundingRadius * AMBER_PARTICLES.sizeFactor,
           );
           this.#applyAmberParticles();
 
@@ -420,7 +426,9 @@ export class App {
     const isCapturing = this.videoRecorder?.isCapturing;
     const recordFrame = isCapturing && this.videoRecorder.needsFrame(now);
 
-    const dt = this.#lastFrameTime ? Math.min(0.05, (now - this.#lastFrameTime) * 0.001) : 0.016;
+    const dt = this.#lastFrameTime
+      ? Math.min(0.05, (now - this.#lastFrameTime) * 0.001)
+      : 0.016;
     this.#lastFrameTime = now;
 
     if (this.amberParticles) {
@@ -446,7 +454,7 @@ export class App {
       this.interaction.isFocused ||
       this.selection.hasBlink ||
       this.amberParticles?.isActive ||
-      (this.videoRecorder?.state === "paused");
+      this.videoRecorder?.state === "paused";
 
     if (shouldRender) {
       if (this.interaction.isFocused && this.tooltip.isVisible) {

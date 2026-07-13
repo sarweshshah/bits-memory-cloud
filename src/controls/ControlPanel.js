@@ -24,6 +24,7 @@ export class ControlPanel {
     this.recordingStatusController = null;
     this.hoverEnabledController = null;
     this.showTooltipCoordsController = null;
+    this.tooltipOptionsUnlocked = true; // False while a tooltip is visible
   }
 
   /** Build the GUI tree and return camera controller refs for bidirectional sync. */
@@ -76,11 +77,15 @@ export class ControlPanel {
     this.hoverEnabledController = tooltipFolder
       .add(this.params, "hoverEnabled")
       .name("Hover")
-      .onChange((v) => this.callbacks.onHoverEnabledChange(v));
+      .onChange((v) => {
+        this.#syncCoordinatesController();
+        this.callbacks.onHoverEnabledChange(v);
+      });
     this.showTooltipCoordsController = tooltipFolder
       .add(this.params, "showTooltipCoords")
       .name("Coordinates")
       .onChange(() => this.callbacks.onShowTooltipCoordsChange());
+    this.#syncCoordinatesController();
 
     // --- Camera orbit controls ---
     const cameraFolder = this.gui.addFolder("Camera");
@@ -153,10 +158,18 @@ export class ControlPanel {
     this.pointCountController?.updateDisplay();
   }
 
-  /** Lock tooltip data options while a hover/focused tooltip is visible. */
+  /** Lock tooltip options while a hover/focused tooltip is visible. */
   setTooltipOptionsEnabled(enabled) {
+    this.tooltipOptionsUnlocked = enabled;
     this.hoverEnabledController?.disable(!enabled);
-    this.showTooltipCoordsController?.disable(!enabled);
+    this.#syncCoordinatesController();
+  }
+
+  /** Coordinates is only editable when Hover is on and no tooltip is locking the folder. */
+  #syncCoordinatesController() {
+    const coordsEnabled =
+      this.tooltipOptionsUnlocked && this.params.hoverEnabled;
+    this.showTooltipCoordsController?.disable(!coordsEnabled);
   }
 
   /** Sync recording controls with current capture state. */

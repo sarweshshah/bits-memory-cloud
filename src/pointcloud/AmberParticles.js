@@ -22,7 +22,7 @@ function getSoftSprite() {
     0,
     size / 2,
     size / 2,
-    size / 2
+    size / 2,
   );
   gradient.addColorStop(0, "rgba(255,255,255,1)");
   gradient.addColorStop(0.35, "rgba(255,255,255,0.55)");
@@ -65,7 +65,8 @@ export class AmberParticles {
     box.getCenter(center);
 
     // Slightly expand so embers drift around the silhouette, not only inside
-    const pad = Math.max(size.x, size.y, size.z) * AMBER_PARTICLES.boundsPadding;
+    const pad =
+      Math.max(size.x, size.y, size.z) * AMBER_PARTICLES.boundsPadding;
     const half = size.clone().multiplyScalar(0.5).addScalar(pad);
     // Y: ground at center − half, sky extends to center + 2·half
     const yMin = center.y - half.y;
@@ -164,9 +165,7 @@ export class AmberParticles {
     this.windHeading +=
       breeze.turnSpeed *
       dt *
-      (0.55 +
-        0.45 * Math.sin(t * 0.17) +
-        0.25 * Math.sin(t * 0.41 + 1.7));
+      (0.55 + 0.45 * Math.sin(t * 0.17) + 0.25 * Math.sin(t * 0.41 + 1.7));
 
     const gust =
       0.5 +
@@ -193,8 +192,10 @@ export class AmberParticles {
       // Local air noise — differs by particle and drifts with time
       const flutterT = t * (0.7 + phase * 0.15) + phase;
       const fx = Math.sin(flutterT * 1.3 + arr[i3] * 0.02) * flutterAmp;
-      const fy = Math.cos(flutterT * 1.1 + arr[i3 + 2] * 0.02) * flutterAmp * 0.55;
-      const fz = Math.sin(flutterT * 0.9 + arr[i3 + 1] * 0.03 + phase) * flutterAmp;
+      const fy =
+        Math.cos(flutterT * 1.1 + arr[i3 + 2] * 0.02) * flutterAmp * 0.55;
+      const fz =
+        Math.sin(flutterT * 0.9 + arr[i3 + 1] * 0.03 + phase) * flutterAmp;
 
       // Accelerate toward wind + flutter; drag damps relative motion
       const ax = (windX + fx - vel[i3]) * drag * invMass;
