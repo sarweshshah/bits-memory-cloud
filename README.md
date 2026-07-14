@@ -1,6 +1,6 @@
 # Bits Memory Cloud
 
-![Bits Memory Cloud — interactive 3D point cloud viewer](docs/hero.jpg)
+![Bits Memory Cloud — interactive 3D point cloud viewer](docs/hero.png)
 
 Interactive 3D point cloud viewer built with [Three.js](https://threejs.org/), [GSAP](https://gsap.com/), and [Vite](https://vitejs.dev/). A textured OBJ mesh is converted offline into a dense colored PLY point cloud, then rendered in the browser with orbit controls, point selection, and a live settings panel.
 
